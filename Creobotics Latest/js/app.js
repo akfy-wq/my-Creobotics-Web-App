@@ -652,8 +652,10 @@ function renderLesson(moduleId) {
       <h1>${escapeHtml(m.title)}</h1>
     </div>
     <div class="lesson-body">
-      <p style="font-weight:600; color:#2d07a0; margin-bottom:6px;">${escapeHtml(m.subtitle)}</p>
-      ${m.content.map(renderContentBlock).join("")}
+      <div class="lesson-content-block" style="border-color: ${m.color};">
+        <p class="lesson-subtitle">${escapeHtml(m.subtitle)}</p>
+        ${m.content.map(renderContentBlock).join("")}
+      </div>
       <button class="btn btn-primary" id="take-quiz-btn" style="max-width:240px; margin-top:10px;">Take the Quiz</button>
     </div>
   `;

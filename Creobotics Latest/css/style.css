@@ -695,15 +695,32 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .lesson-body { max-width: 780px; }
+
+/* Bordered block wrapping the module subtitle through the last paragraph.
+   The border color is set inline per-module (matches the module's own
+   accent color, e.g. --mod-1 for Elements of a Robot). */
+.lesson-content-block {
+  border: 3px solid var(--purple);
+  border-radius: var(--radius-lg);
+  padding: 24px clamp(18px, 4vw, 30px);
+  margin-bottom: 20px;
+}
+
+.lesson-subtitle {
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+
 .lesson-body h2 {
-  color: #2d07a0;   
+  color: var(--white);
   font-size: 1.15rem;
   margin-top: 26px;
   margin-bottom: 10px;
 }
-.lesson-body p { line-height: 1.7; color: var(--ink); margin-bottom: 12px; text-align: justify; }
+.lesson-body p { line-height: 1.7; color: var(--white); margin-bottom: 12px; text-align: justify; }
 .lesson-body ul { margin: 0 0 14px; padding-left: 20px; line-height: 1.7; }
-.lesson-body li { margin-bottom: 6px; }
+.lesson-body li { margin-bottom: 6px; color: var(--white); }
 
 /* ---------------- Quiz screen ---------------- */
 .quiz-progress-row {
@@ -793,7 +810,6 @@ body.dark .input-wrap input, body.dark .input-wrap select { background: #241a38;
 body.dark .option-tile { background: #241a38; }
 body.dark .option-tile:hover { background: #2c2044; }
 body.dark .settings-icon { background: #2c2044; }
-body.dark .lesson-body p, body.dark .lesson-body li { color: var(--ink); }
 body.dark .course-table thead th { border-color: #3a2c58; }
 body.dark .course-table tbody td { border-color: #2c2044; }
 body.dark .course-table tbody tr:hover td { background: #241a38; }
