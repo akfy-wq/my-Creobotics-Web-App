@@ -652,7 +652,7 @@ function renderLesson(moduleId) {
       <h1>${escapeHtml(m.title)}</h1>
     </div>
     <div class="lesson-body">
-      <div class="lesson-content-block" style="border-color: ${m.color}; background: linear-gradient(135deg, ${m.color}, var(--purple));">
+      <div class="lesson-content-block" style="background: linear-gradient(135deg, ${m.color}, var(--purple));">
         <p class="lesson-subtitle">${escapeHtml(m.subtitle)}</p>
         ${m.content.map(renderContentBlock).join("")}
       </div>

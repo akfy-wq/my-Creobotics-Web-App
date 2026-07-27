@@ -700,7 +700,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
    The border color is set inline per-module (matches the module's own
    accent color, e.g. --mod-1 for Elements of a Robot). */
 .lesson-content-block {
-  border: 3px solid var(--purple);
   border-radius: var(--radius-lg);
   padding: 24px clamp(18px, 4vw, 30px);
   margin-bottom: 20px;
