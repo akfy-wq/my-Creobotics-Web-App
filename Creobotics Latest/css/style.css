@@ -704,6 +704,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   border-radius: var(--radius-lg);
   padding: 24px clamp(18px, 4vw, 30px);
   margin-bottom: 20px;
+  box-shadow: var(--shadow-soft);
 }
 
 .lesson-subtitle {
