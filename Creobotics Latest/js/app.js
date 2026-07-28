@@ -9,7 +9,7 @@
 /* ============================================================
    STORAGE LAYER
    All persisted data lives in localStorage under these keys:
-   - creo_users            : JSON array of { name, email, passwordHash }
+   - creo_users            : JSON array of { name, email, school, passwordHash }
    - creo_session          : email of the currently logged-in user (or absent)
    - creo_theme            : "light" | "dark"
    - creo_progress_<email> : JSON progress object for that user
@@ -75,7 +75,7 @@ function emailExists(email) {
   return loadUsers().some((u) => u.email.toLowerCase() === email.toLowerCase());
 }
 
-async function registerUser(name, email, password) {
+async function registerUser(name, email, school, password) {
   if (emailExists(email)) {
     return "An account with this email already exists.";
   }
@@ -83,7 +83,11 @@ async function registerUser(name, email, password) {
   users.push({
     name: name.trim(),
     email: email.trim().toLowerCase(),
+    school: school.trim(),
     passwordHash: await hashPassword(password),
+    avatarId: null,
+    nickname: null,
+    profileComplete: false,
   });
   saveUsers(users);
   return null; // success
@@ -152,6 +156,24 @@ async function changeUserEmail(oldEmail, currentPassword, newEmail) {
   return null; // success
 }
 
+/* ---- Change profile (Name + School; no password required since these
+   aren't sensitive credential fields) ---- */
+function updateUserProfile(email, { name, school }) {
+  const users = loadUsers();
+  const idx = users.findIndex((u) => u.email === email);
+  if (idx === -1) return "Account not found.";
+
+  const trimmedName = name.trim();
+  const trimmedSchool = school.trim();
+  if (trimmedName.length < 2) return "Please enter your full name.";
+  if (trimmedSchool.length < 2) return "Please enter your school.";
+
+  users[idx].name = trimmedName;
+  users[idx].school = trimmedSchool;
+  saveUsers(users);
+  return null; // success
+}
+
 /* ---- Forgot password (user is logged OUT and does not know their password) ----
    NOTE: Since Creobotics has no backend/email server, there is no way to send
    a real verification link. This flow simply lets someone reset the password
@@ -165,6 +187,19 @@ async function resetPasswordForgot(email, newPassword) {
   users[idx].passwordHash = await hashPassword(newPassword);
   saveUsers(users);
   return null; // success
+}
+
+/* ---- Profile setup (avatar + nickname, shown once after first login) ---- */
+function completeProfileSetup(email, avatarId, nickname) {
+  const users = loadUsers();
+  const idx = users.findIndex((u) => u.email === email);
+  if (idx !== -1) {
+    users[idx].avatarId = avatarId;
+    users[idx].nickname = nickname;
+    users[idx].profileComplete = true;
+    saveUsers(users);
+  }
+  return getCurrentUser();
 }
 
 /* ============================================================
@@ -294,15 +329,121 @@ function showFormModal({ title, description, fields, confirmLabel, onSubmit }) {
 function switchAuthView(target) {
   $("#view-login").classList.toggle("hidden", target !== "login");
   $("#view-signup").classList.toggle("hidden", target !== "signup");
+  $("#view-avatar-setup").classList.add("hidden");
   $("#view-app").classList.add("hidden");
 }
 
 function enterApp() {
   $("#view-login").classList.add("hidden");
   $("#view-signup").classList.add("hidden");
-  $("#view-app").classList.remove("hidden");
   state.progress = loadProgress(state.user.email);
+
+  // First time in (or an older account from before this feature existed):
+  // pick an avatar + nickname before ever seeing the dashboard.
+  if (!state.user.profileComplete) {
+    showAvatarSetup();
+    return;
+  }
+  $("#view-app").classList.remove("hidden");
   navigate("home");
+}
+
+/* ============================================================
+   PROFILE SETUP SCREEN (avatar + nickname)
+   ============================================================ */
+
+let avatarSetupSelected = null;
+
+function renderAvatarGrid(selectedId) {
+  return AVATARS.map(
+    (a) => `
+    <button type="button" class="avatar-option ${a.id === selectedId ? "selected" : ""}" data-avatar-id="${a.id}" title="${escapeHtml(a.label)}">
+      <img src="${a.src}" alt="${escapeHtml(a.label)} avatar" />
+    </button>`
+  ).join("");
+}
+
+/* opts.edit = true when reopened later from the Profile page, rather than
+   the mandatory first-run screen shown right after signup/login. */
+function showAvatarSetup(opts = {}) {
+  const isEdit = !!opts.edit;
+
+  $("#view-login").classList.add("hidden");
+  $("#view-signup").classList.add("hidden");
+  $("#view-app").classList.add("hidden");
+  $("#view-avatar-setup").classList.remove("hidden");
+
+  $("#avatar-setup-heading").textContent = isEdit ? "Update your profile" : "Set up your profile";
+  $("#avatar-setup-subtitle").textContent = isEdit
+    ? "Change your avatar or nickname anytime"
+    : "Pick an avatar and a nickname to get started";
+  $("#avatar-setup-error").classList.add("hidden");
+  $("#avatar-setup-cancel-wrap").classList.toggle("hidden", !isEdit);
+
+  avatarSetupSelected = state.user.avatarId || null;
+  $("#avatar-grid").innerHTML = renderAvatarGrid(avatarSetupSelected);
+  $("#setup-nickname").value = state.user.nickname || "";
+
+  $all(".avatar-option").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      avatarSetupSelected = btn.dataset.avatarId;
+      $all(".avatar-option").forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+    });
+  });
+
+  // Re-bind the continue/cancel buttons fresh each time this screen opens,
+  // so listeners don't stack up across multiple visits.
+  const continueBtn = $("#avatar-setup-continue");
+  const freshContinue = continueBtn.cloneNode(true);
+  continueBtn.parentNode.replaceChild(freshContinue, continueBtn);
+  freshContinue.textContent = isEdit ? "Save Changes" : "Continue";
+  freshContinue.addEventListener("click", () => {
+    const nickname = $("#setup-nickname").value.trim();
+    const errBox = $("#avatar-setup-error");
+    errBox.classList.add("hidden");
+
+    if (!avatarSetupSelected) {
+      errBox.textContent = "Pick an avatar to continue.";
+      errBox.classList.remove("hidden");
+      return;
+    }
+    if (nickname.length < 2) {
+      errBox.textContent = "Enter a nickname (at least 2 characters).";
+      errBox.classList.remove("hidden");
+      return;
+    }
+
+    state.user = completeProfileSetup(state.user.email, avatarSetupSelected, nickname);
+    $("#view-avatar-setup").classList.add("hidden");
+    $("#view-app").classList.remove("hidden");
+    navigate(isEdit ? "profile" : "home");
+    showToast(isEdit ? "Profile updated." : `Welcome, ${nickname}!`);
+  });
+
+  const cancelBtn = $("#avatar-setup-cancel");
+  const freshCancel = cancelBtn.cloneNode(true);
+  cancelBtn.parentNode.replaceChild(freshCancel, cancelBtn);
+  if (isEdit) {
+    freshCancel.addEventListener("click", () => {
+      $("#view-avatar-setup").classList.add("hidden");
+      $("#view-app").classList.remove("hidden");
+      navigate("profile");
+    });
+  }
+}
+
+/* Renders the circular avatar image if the user picked one, falling back
+   to their initials (used in the dashboard side panel and Profile page). */
+function renderAvatar(styleAttr = "") {
+  const av = state.user.avatarId ? AVATARS.find((a) => a.id === state.user.avatarId) : null;
+  const initialsSource = (state.user.nickname || state.user.name || "?").trim();
+  const initials = initialsSource.charAt(0).toUpperCase() || "?";
+  const styleHtml = styleAttr ? ` style="${styleAttr}"` : "";
+  if (av) {
+    return `<div class="avatar"${styleHtml}><img src="${av.src}" alt="${escapeHtml(av.label)} avatar" /></div>`;
+  }
+  return `<div class="avatar"${styleHtml}>${initials}</div>`;
 }
 
 /* ============================================================
@@ -323,7 +464,7 @@ function navigate(page, opts = {}) {
     case "lesson": main.innerHTML = renderLesson(state.activeModuleId); attachLessonEvents(); break;
     case "quiz": main.innerHTML = renderQuizStart(state.activeModuleId); attachQuizEvents(); break;
     case "quiz-result": main.innerHTML = renderQuizResult(opts.result); attachResultEvents(opts.result); break;
-    case "profile": main.innerHTML = renderProfile(); break;
+    case "profile": main.innerHTML = renderProfile(); attachProfileEvents(); break;
     case "settings": main.innerHTML = renderSettings(); attachSettingsEvents(); break;
     case "about": main.innerHTML = renderAbout(); break;
     default: main.innerHTML = "<p>Page not found.</p>";
@@ -428,13 +569,11 @@ function renderHome() {
     ...unlockedModules.filter((m) => m.id !== continueId),
   ].slice(0, 3);
 
-  const initials = state.user.name.trim().charAt(0).toUpperCase() || "?";
-
   return `
     <div class="topbar">
       <div>
         <div class="page-title">Dashboard</div>
-        <div class="page-subtitle">Welcome back, ${escapeHtml(state.user.name)}</div>
+        <div class="page-subtitle">Welcome back, ${escapeHtml(state.user.nickname || state.user.name)}</div>
       </div>
     </div>
 
@@ -508,8 +647,8 @@ function renderHome() {
 
       <aside class="right-panel">
         <div class="card profile-panel">
-          <div class="avatar">${initials}</div>
-          <div class="p-name">${escapeHtml(state.user.name)}</div>
+          ${renderAvatar()}
+          <div class="p-name">${escapeHtml(state.user.nickname || state.user.name)}</div>
           <div class="p-role">${escapeHtml(state.user.email)}</div>
         </div>
 
@@ -652,7 +791,7 @@ function renderLesson(moduleId) {
       <h1>${escapeHtml(m.title)}</h1>
     </div>
     <div class="lesson-body">
-      <div class="lesson-content-block" style="background: linear-gradient(135deg, ${m.color}, var(--purple));">
+      <div class="lesson-content-block" style="border-color: ${m.color}; background: linear-gradient(135deg, ${m.color}, var(--purple));">
         <p class="lesson-subtitle">${escapeHtml(m.subtitle)}</p>
         ${m.content.map(renderContentBlock).join("")}
       </div>
@@ -811,10 +950,6 @@ function attachResultEvents(result) {
 /* ---- Profile ---- */
 function renderProfile() {
   const p = state.progress;
-  const pct = completionPercentage(p);
-  const initials = state.user.name.trim().charAt(0).toUpperCase() || "?";
-  const circumference = 2 * Math.PI * 46;
-  const offset = circumference - (pct / 100) * circumference;
 
   const rows = MODULES.map((m) => {
     const unlocked = p.unlocked[m.id];
@@ -837,23 +972,67 @@ function renderProfile() {
     <div class="topbar">
       <div class="page-title">Profile</div>
     </div>
-    <div class="card" style="text-align:center; margin-bottom:22px;">
-      <div class="avatar" style="width:84px; height:84px; font-size:2rem; margin:0 auto 14px;">${initials}</div>
-      <div style="font-weight:700; font-size:1.2rem;">${escapeHtml(state.user.name)}</div>
-      <div style="color:var(--ink-soft); font-size:0.9rem; margin-bottom:16px;">${escapeHtml(state.user.email)}</div>
-      <div class="ring-wrap" style="width:110px; height:110px; margin:0 auto;">
-        <svg viewBox="0 0 100 100">
-          <circle class="ring-bg" cx="50" cy="50" r="46"></circle>
-          <circle class="ring-fg" cx="50" cy="50" r="46"
-            stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"></circle>
-        </svg>
-        <div class="ring-label" style="font-size:1.3rem;">${pct}%</div>
+    <div class="card profile-hero">
+      <div class="profile-hero-fields">
+        <div class="profile-field">
+          <div class="profile-field-label">Name</div>
+          <div class="profile-field-value">${escapeHtml(state.user.name)}</div>
+        </div>
+        <div class="profile-field">
+          <div class="profile-field-label">E-mail</div>
+          <div class="profile-field-value">${escapeHtml(state.user.email)}</div>
+        </div>
+        <div class="profile-field">
+          <div class="profile-field-label">School</div>
+          <div class="profile-field-value">${escapeHtml(state.user.school || "—")}</div>
+        </div>
       </div>
-      <div style="color:var(--ink-soft); font-size:0.8rem; margin-top:6px;">Overall Progress</div>
+      <div class="profile-hero-side">
+        ${renderAvatar("width:128px; height:128px; font-size:2.7rem;")}
+        <div class="profile-hero-actions">
+          <button type="button" class="btn btn-outline btn-sm" id="edit-profile-btn">Edit Profile</button>
+          <button type="button" class="btn btn-outline btn-sm" id="edit-avatar-btn">Edit Avatar &amp; Nickname</button>
+        </div>
+      </div>
     </div>
     <h3 style="color:var(--white); margin-bottom:12px;">Module Scores</h3>
     ${rows}
   `;
+}
+
+function attachProfileEvents() {
+  const avatarBtn = $("#edit-avatar-btn");
+  if (avatarBtn) avatarBtn.addEventListener("click", () => showAvatarSetup({ edit: true }));
+
+  const profileBtn = $("#edit-profile-btn");
+  if (profileBtn) {
+    profileBtn.addEventListener("click", () => {
+      showFormModal({
+        title: "Edit Profile",
+        description: "Update your name and school.",
+        fields: [
+          { id: "name", label: "Full Name", type: "text", placeholder: "Jane Dela Cruz", autocomplete: "name" },
+          { id: "school", label: "School", type: "text", placeholder: "Polytechnic University of the Philippines", autocomplete: "school" },
+        ],
+        confirmLabel: "Save",
+        onSubmit: async ({ name, school }) => {
+          const err = updateUserProfile(state.user.email, { name, school });
+          if (err) return err;
+
+          state.user = getCurrentUser();
+          showToast("Profile updated.");
+          navigate("profile");
+          return null;
+        },
+      });
+
+      // Pre-fill the modal with the current values.
+      const nameInput = document.getElementById("modal-name");
+      const schoolInput = document.getElementById("modal-school");
+      if (nameInput) nameInput.value = state.user.name || "";
+      if (schoolInput) schoolInput.value = state.user.school || "";
+    });
+  }
 }
 
 /* ---- Settings ---- */
@@ -1099,6 +1278,7 @@ function init() {
     e.preventDefault();
     const name = $("#signup-name").value.trim();
     const email = $("#signup-email").value.trim();
+    const school = $("#signup-school").value.trim();
     const password = $("#signup-password").value;
     const confirm = $("#signup-confirm").value;
     const errBox = $("#signup-error");
@@ -1106,10 +1286,11 @@ function init() {
 
     if (name.length < 2) return showFieldError(errBox, "Please enter your full name.");
     if (!/^[\w.\-]+@[\w-]+\.[\w.\-]+$/.test(email)) return showFieldError(errBox, "Enter a valid email address.");
+    if (school.length < 2) return showFieldError(errBox, "Please enter your school.");
     if (password.length < 6) return showFieldError(errBox, "Password must be at least 6 characters.");
     if (password !== confirm) return showFieldError(errBox, "Passwords do not match.");
 
-    const err = await registerUser(name, email, password);
+    const err = await registerUser(name, email, school, password);
     if (err) return showFieldError(errBox, err);
 
     showToast("Account created! Please log in.");

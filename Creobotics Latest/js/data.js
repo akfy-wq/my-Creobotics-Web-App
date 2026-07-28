@@ -5,6 +5,22 @@
 // Kept separate from app.js so content can be edited/extended without
 // touching any application logic.
 
+// Avatar options shown on the one-time "set up your profile" screen after
+// signup/login (and reachable later from the Profile page). These are
+// simple placeholder robot icons — swap in your own 8 pictures by replacing
+// the files in images/avatars/ (keep the same filenames) or by pointing
+// `src` at different files below.
+const AVATARS = [
+  { id: "boy-1", gender: "boy", label: "Blue", src: "images/avatars/boy1.svg" },
+  { id: "boy-2", gender: "boy", label: "Teal", src: "images/avatars/boy2.svg" },
+  { id: "boy-3", gender: "boy", label: "Orange", src: "images/avatars/boy3.svg" },
+  { id: "boy-4", gender: "boy", label: "Indigo", src: "images/avatars/boy4.svg" },
+  { id: "girl-1", gender: "girl", label: "Pink", src: "images/avatars/girl1.svg" },
+  { id: "girl-2", gender: "girl", label: "Violet", src: "images/avatars/girl2.svg" },
+  { id: "girl-3", gender: "girl", label: "Magenta", src: "images/avatars/girl3.svg" },
+  { id: "girl-4", gender: "girl", label: "Mint", src: "images/avatars/girl4.svg" },
+];
+
 const MODULES = [
   {
     id: 1,

@@ -84,6 +84,12 @@
             </div>
           </div>
           <div class="field">
+            <label for="signup-school">School</label>
+            <div class="input-wrap">
+              <input id="signup-school" type="text" autocomplete="school" placeholder="Polytechnic University of the Philippines" required />
+            </div>
+          </div>
+          <div class="field">
             <label for="signup-password">Password</label>
             <div class="input-wrap">
               <input id="signup-password" type="password" autocomplete="new-password" placeholder="At least 6 characters" required />
@@ -102,6 +108,37 @@
 
         <p class="auth-switch">Already have an account?
           <button type="button" id="go-login">Log In</button>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROFILE SETUP: AVATAR + NICKNAME (first thing after auth) ============ -->
+  <section id="view-avatar-setup" class="view hidden">
+    <div class="brand-bar">
+      <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
+      <div class="brand-name">Creobotics</div>
+    </div>
+    <div class="auth-wrap">
+      <div class="auth-card" style="max-width:560px;">
+        <h1 class="auth-title" id="avatar-setup-heading">Set up your profile</h1>
+        <p class="auth-subtitle" id="avatar-setup-subtitle">Pick an avatar and a nickname to get started</p>
+
+        <div id="avatar-setup-error" class="error-banner hidden"></div>
+
+        <div class="avatar-grid" id="avatar-grid"></div>
+
+        <div class="field" style="margin-top:20px;">
+          <label for="setup-nickname">Nickname</label>
+          <div class="input-wrap">
+            <input id="setup-nickname" type="text" placeholder="What should we call you?" maxlength="20" />
+          </div>
+        </div>
+
+        <button type="button" id="avatar-setup-continue" class="btn btn-primary" style="width:100%; margin-top:10px;">Continue</button>
+
+        <p class="auth-switch hidden" id="avatar-setup-cancel-wrap">
+          <button type="button" id="avatar-setup-cancel">Cancel</button>
         </p>
       </div>
     </div>

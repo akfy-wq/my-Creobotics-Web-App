@@ -432,6 +432,69 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   font-weight: 700;
   font-size: 1.4rem;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ---------------- Avatar picker (profile setup) ---------------- */
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.avatar-option {
+  border: 3px solid transparent;
+  border-radius: 50%;
+  padding: 0;
+  background: #f1ecfd;
+  aspect-ratio: 1;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.avatar-option img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.avatar-option:hover { transform: translateY(-2px); }
+
+.avatar-option.selected {
+  border-color: var(--purple);
+  box-shadow: 0 8px 18px rgba(124, 58, 237, 0.35);
+}
+
+.avatar-option.selected::after {
+  content: "✓";
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--purple);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 380px) {
+  .avatar-grid { gap: 8px; }
 }
 
 .welcome-text { flex: 1; min-width: 160px; }
@@ -571,6 +634,62 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .profile-panel .p-name { font-weight: 700; font-size: 1.05rem; }
 .profile-panel .p-role { color: var(--ink-soft); font-size: 0.8rem; margin-top: 2px; }
 
+/* Profile page header card */
+.profile-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+  text-align: left;
+  margin-bottom: 22px;
+}
+.profile-hero-fields {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  flex: 1;
+  min-width: 0;
+}
+.profile-field-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.profile-field-value {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.profile-hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  align-self: center;
+}
+.profile-hero-side .avatar {
+  width: 128px;
+  height: 128px;
+  font-size: 2.7rem;
+  flex-shrink: 0;
+}
+.profile-hero-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 160px;
+}
+
+@media (max-width: 520px) {
+  .profile-hero { flex-wrap: wrap-reverse; justify-content: center; text-align: center; }
+  .profile-hero-fields { width: 100%; }
+}
+
 /* Mini calendar */
 .mini-cal-header {
   display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
@@ -700,6 +819,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
    The border color is set inline per-module (matches the module's own
    accent color, e.g. --mod-1 for Elements of a Robot). */
 .lesson-content-block {
+  border: 3px solid var(--purple);
   border-radius: var(--radius-lg);
   padding: 24px clamp(18px, 4vw, 30px);
   margin-bottom: 20px;
