@@ -871,6 +871,26 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .option-tile.selected .option-letter { background: var(--purple); color: var(--white); border-color: var(--purple); }
 
+/* Revealed answer states — shown as soon as the user picks an option */
+.option-tile.locked { cursor: default; pointer-events: none; }
+.option-tile.correct { border-color: var(--success); background: rgba(47, 174, 102, 0.14); }
+.option-tile.correct .option-letter { background: var(--success); color: var(--white); border-color: var(--success); }
+.option-tile.incorrect { border-color: var(--danger); background: rgba(226, 72, 58, 0.12); }
+.option-tile.incorrect .option-letter { background: var(--danger); color: var(--white); border-color: var(--danger); }
+
+.quiz-feedback {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  font-size: 0.88rem; line-height: 1.5; margin-top: 6px;
+}
+.quiz-feedback-correct {
+  background: rgba(47, 174, 102, 0.12); color: var(--success); font-weight: 600;
+}
+.quiz-feedback-incorrect {
+  background: rgba(226, 72, 58, 0.1); color: var(--ink); border-left: 3px solid var(--danger);
+}
+.quiz-feedback-incorrect strong { color: var(--danger); }
+
 .quiz-nav-row { display: flex; gap: 12px; margin-top: 22px; }
 
 /* ---------------- Result screen ---------------- */
@@ -929,6 +949,10 @@ body.dark {
 body.dark .input-wrap input, body.dark .input-wrap select { background: #241a38; border-color: #3a2c58; color: var(--ink); }
 body.dark .option-tile { background: #241a38; }
 body.dark .option-tile:hover { background: #2c2044; }
+body.dark .option-tile.correct { background: rgba(47, 174, 102, 0.22); }
+body.dark .option-tile.incorrect { background: rgba(226, 72, 58, 0.2); }
+body.dark .quiz-feedback-incorrect { background: rgba(226, 72, 58, 0.16); color: var(--ink); }
+body.dark .quiz-feedback-correct { background: rgba(47, 174, 102, 0.2); }
 body.dark .settings-icon { background: #2c2044; }
 body.dark .course-table thead th { border-color: #3a2c58; }
 body.dark .course-table tbody td { border-color: #2c2044; }

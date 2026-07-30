@@ -51,12 +51,12 @@ const MODULES = [
       { type: "p", text: "The sense-compute-act loop repeats continuously, often many times per second, allowing a robot to respond to a constantly changing environment instead of just following a single fixed script. Understanding this loop is the foundation for everything else you'll learn about robotics in Creobotics." }
     ],
     quiz: [
-      { q: "What are the three core stages every robot cycles through?", options: ["Sense, Compute, Act", "Build, Test, Ship", "Power, Sleep, Wake", "Start, Pause, Stop"], correct: 0 },
-      { q: "Which component allows a robot to 'see' its surroundings?", options: ["Speaker", "Camera", "Battery", "Wheel"], correct: 1 },
-      { q: "What happens during the 'Compute' stage?", options: ["The robot moves", "The robot charges", "The robot decides what to do next", "The robot senses sound"], correct: 2 },
-      { q: "Which motor type can rotate to a precise angle?", options: ["DC motor", "Servo motor", "Jet engine", "Piston"], correct: 1 },
-      { q: "Why does the sense-compute-act loop repeat continuously?", options: ["To save battery", "To respond to a changing environment", "To reduce cost", "To avoid using sensors"], correct: 1 },
-      { q: "Touch and pressure sensors are mainly used to detect:", options: ["Sound frequency", "Physical contact and grip strength", "Wireless signals", "Ambient light color"], correct: 1 }
+      { q: "What are the three core stages every robot cycles through?", options: ["Sense, Compute, Act", "Build, Test, Ship", "Power, Sleep, Wake", "Start, Pause, Stop"], correct: 0, explanation: "Every robot repeats Sense (gather data), Compute (decide), and Act (move/respond) — the other options describe development or power states, not the robot's operating loop." },
+      { q: "Which component allows a robot to 'see' its surroundings?", options: ["Speaker", "Camera", "Battery", "Wheel"], correct: 1, explanation: "A camera captures visual information from the environment. Speakers output sound, batteries store power, and wheels handle movement — none of them sense surroundings." },
+      { q: "What happens during the 'Compute' stage?", options: ["The robot moves", "The robot charges", "The robot decides what to do next", "The robot senses sound"], correct: 2, explanation: "Compute is the 'thinking' stage, where the robot processes sensor data and decides what action to take. Moving happens during Act, and sensing happens during Sense." },
+      { q: "Which motor type can rotate to a precise angle?", options: ["DC motor", "Servo motor", "Jet engine", "Piston"], correct: 1, explanation: "Servo motors accept a target angle and rotate precisely to it, which is why they're used for steering and joints. A plain DC motor just spins continuously without angle control." },
+      { q: "Why does the sense-compute-act loop repeat continuously?", options: ["To save battery", "To respond to a changing environment", "To reduce cost", "To avoid using sensors"], correct: 1, explanation: "The environment keeps changing, so the robot must keep sensing and recalculating its next move in order to react appropriately in real time." },
+      { q: "Touch and pressure sensors are mainly used to detect:", options: ["Sound frequency", "Physical contact and grip strength", "Wireless signals", "Ambient light color"], correct: 1, explanation: "Touch and pressure sensors measure physical contact and force, such as when a gripper is holding an object firmly enough — not sound, signals, or light." }
     ]
   },
   {
@@ -94,12 +94,12 @@ const MODULES = [
       { type: "p", text: "A useful habit when studying any robot is to ask: 'Is this piece structural, electronic, mechanical, or power-related?' Doing this for every component you encounter will make it much easier to understand — and eventually design — your own robots." }
     ],
     quiz: [
-      { q: "What does 'hardware' refer to in a robot?", options: ["Only the software code", "Every physical part you can touch", "Only the battery", "The robot's name"], correct: 1 },
-      { q: "Which category does a robot's frame or chassis belong to?", options: ["Structural hardware", "Power hardware", "Software", "Cloud storage"], correct: 0 },
-      { q: "Voltage regulators are part of which hardware category?", options: ["Mechanical", "Electronic", "Structural", "None of these"], correct: 1 },
-      { q: "Gears and joints are examples of:", options: ["Power hardware", "Electronic hardware", "Mechanical hardware", "Cloud hardware"], correct: 2 },
-      { q: "Why are lithium batteries popular for mobile robots?", options: ["They are heavy and bulky", "They are lightweight with strong charge relative to size", "They never need charging", "They are the cheapest option always"], correct: 1 },
-      { q: "A good habit when studying a robot's hardware is to ask:", options: ["How much does it cost?", "Is this structural, electronic, mechanical, or power-related?", "What color is it?", "Who invented it?"], correct: 1 }
+      { q: "What does 'hardware' refer to in a robot?", options: ["Only the software code", "Every physical part you can touch", "Only the battery", "The robot's name"], correct: 1, explanation: "Hardware means the physical parts of the robot — frame, motors, sensors, wiring, and so on. Software is the code that runs on that hardware, which is a separate concept." },
+      { q: "Which category does a robot's frame or chassis belong to?", options: ["Structural hardware", "Power hardware", "Software", "Cloud storage"], correct: 0, explanation: "The chassis/frame gives the robot its physical shape and holds everything together, which makes it structural hardware — not power, code, or storage." },
+      { q: "Voltage regulators are part of which hardware category?", options: ["Mechanical", "Electronic", "Structural", "None of these"], correct: 1, explanation: "Voltage regulators manage and control electrical current, so they belong to electronic hardware rather than mechanical or structural parts." },
+      { q: "Gears and joints are examples of:", options: ["Power hardware", "Electronic hardware", "Mechanical hardware", "Cloud hardware"], correct: 2, explanation: "Gears and joints are physical, moving mechanical parts that transmit motion — they don't store power or process electronic signals." },
+      { q: "Why are lithium batteries popular for mobile robots?", options: ["They are heavy and bulky", "They are lightweight with strong charge relative to size", "They never need charging", "They are the cheapest option always"], correct: 1, explanation: "Lithium batteries pack a lot of energy into a small, light package, which matters a lot for mobile robots that need to carry their own power supply." },
+      { q: "A good habit when studying a robot's hardware is to ask:", options: ["How much does it cost?", "Is this structural, electronic, mechanical, or power-related?", "What color is it?", "Who invented it?"], correct: 1, explanation: "Sorting a part into structural, electronic, mechanical, or power helps you understand its role in the robot — cost, color, and inventor don't explain function." }
     ]
   },
   {
@@ -134,12 +134,12 @@ const MODULES = [
       { type: "p", text: "Careful, methodical assembly is one of the most valuable skills in robotics — a well-built robot is far easier to program and troubleshoot than a rushed one." }
     ],
     quiz: [
-      { q: "What should you do before attaching any parts to a robot?", options: ["Turn on the power immediately", "Plan the layout and weight distribution", "Paint the frame", "Write the final code"], correct: 1 },
-      { q: "Why build the chassis first?", options: ["It looks nicer", "It gives a stable base for mounting other parts", "It uses the least electricity", "It is required by law"], correct: 1 },
-      { q: "What is a common cause of erratic robot behavior?", options: ["Too much paint", "A loose motor mount", "Using a heavier battery", "Bright lighting in the room"], correct: 1 },
-      { q: "When should the battery be connected during assembly?", options: ["First, before anything else", "Last, after double-checking connections", "It doesn't matter when", "Only after the robot is painted"], correct: 1 },
-      { q: "Why test one motor or sensor at a time rather than everything at once?", options: ["It saves battery permanently", "It makes problems easier to isolate", "It is required by the manufacturer", "It makes the robot faster"], correct: 1 },
-      { q: "Which of these is a common wiring mistake?", options: ["Labeling wires clearly", "Connecting a sensor backward (wrong polarity)", "Using screws to secure motors", "Testing joints by hand first"], correct: 1 }
+      { q: "What should you do before attaching any parts to a robot?", options: ["Turn on the power immediately", "Plan the layout and weight distribution", "Paint the frame", "Write the final code"], correct: 1, explanation: "Planning the layout and weight distribution first prevents balance issues and rework later — powering on or coding before assembly makes little sense." },
+      { q: "Why build the chassis first?", options: ["It looks nicer", "It gives a stable base for mounting other parts", "It uses the least electricity", "It is required by law"], correct: 1, explanation: "The chassis is the foundation everything else attaches to, so building it first gives you a stable base to mount motors, sensors, and electronics onto." },
+      { q: "What is a common cause of erratic robot behavior?", options: ["Too much paint", "A loose motor mount", "Using a heavier battery", "Bright lighting in the room"], correct: 1, explanation: "A loose motor mount causes inconsistent movement and vibration, which shows up as unpredictable, erratic behavior — paint and lighting don't affect motor performance directly." },
+      { q: "When should the battery be connected during assembly?", options: ["First, before anything else", "Last, after double-checking connections", "It doesn't matter when", "Only after the robot is painted"], correct: 1, explanation: "Connecting the battery last, after verifying all wiring, avoids short circuits or damage from powering up a partially or incorrectly wired robot." },
+      { q: "Why test one motor or sensor at a time rather than everything at once?", options: ["It saves battery permanently", "It makes problems easier to isolate", "It is required by the manufacturer", "It makes the robot faster"], correct: 1, explanation: "Testing one part at a time makes it much easier to pinpoint exactly which component is causing a problem, instead of guessing among several at once." },
+      { q: "Which of these is a common wiring mistake?", options: ["Labeling wires clearly", "Connecting a sensor backward (wrong polarity)", "Using screws to secure motors", "Testing joints by hand first"], correct: 1, explanation: "Reversing polarity when wiring a sensor is a frequent beginner mistake that can damage components or cause the sensor to malfunction." }
     ]
   },
   {
@@ -167,12 +167,12 @@ const MODULES = [
       { type: "p", text: "Learning to work with an app-controlled robot builds intuition for a concept used throughout modern robotics and IoT devices: a control layer (the app) that communicates with a physical layer (the robot) over a wireless connection. This same pattern powers everything from smart home devices to industrial robotic fleets." }
     ],
     quiz: [
-      { q: "What wireless technology is commonly used for short-range robot control?", options: ["Bluetooth", "Satellite", "Fiber optic cable", "AM radio"], correct: 0 },
-      { q: "In block-based programming, what do the visual blocks represent?", options: ["Hardware parts", "Programming commands like 'move forward'", "Battery levels", "Wi-Fi passwords"], correct: 1 },
-      { q: "What is 'real-time control mode' used for?", options: ["Writing code offline", "Sending live commands directly to the robot", "Charging the battery faster", "Updating firmware only"], correct: 1 },
-      { q: "Why is block-based programming useful for beginners?", options: ["It requires memorizing syntax", "It lets you build behavior without memorizing programming syntax", "It only works with Wi-Fi", "It disables sensors"], correct: 1 },
-      { q: "What kind of data can a robot send back to the app?", options: ["Only its name", "Battery level, sensor readings, or video", "Nothing, ever", "Only error sounds"], correct: 1 },
-      { q: "The 'app controls physical robot over wireless connection' pattern also powers:", options: ["Paper books", "Smart home devices and industrial robot fleets", "Analog clocks", "Traditional postal mail"], correct: 1 }
+      { q: "What wireless technology is commonly used for short-range robot control?", options: ["Bluetooth", "Satellite", "Fiber optic cable", "AM radio"], correct: 0, explanation: "Bluetooth is a short-range wireless standard well suited to controlling nearby robots from a phone or app — satellite and fiber are used for very different, longer-range or wired purposes." },
+      { q: "In block-based programming, what do the visual blocks represent?", options: ["Hardware parts", "Programming commands like 'move forward'", "Battery levels", "Wi-Fi passwords"], correct: 1, explanation: "Each visual block stands in for a programming command, letting you snap together instructions like 'move forward' without typing code." },
+      { q: "What is 'real-time control mode' used for?", options: ["Writing code offline", "Sending live commands directly to the robot", "Charging the battery faster", "Updating firmware only"], correct: 1, explanation: "Real-time control mode sends commands to the robot the instant you issue them, letting you drive or operate it live rather than running pre-written code." },
+      { q: "Why is block-based programming useful for beginners?", options: ["It requires memorizing syntax", "It lets you build behavior without memorizing programming syntax", "It only works with Wi-Fi", "It disables sensors"], correct: 1, explanation: "Block-based programming removes the need to memorize exact syntax, so beginners can focus on logic and sequencing instead of typing errors." },
+      { q: "What kind of data can a robot send back to the app?", options: ["Only its name", "Battery level, sensor readings, or video", "Nothing, ever", "Only error sounds"], correct: 1, explanation: "Robots can stream useful feedback like battery level, sensor readings, or camera video back to the controlling app, not just a name or error sounds." },
+      { q: "The 'app controls physical robot over wireless connection' pattern also powers:", options: ["Paper books", "Smart home devices and industrial robot fleets", "Analog clocks", "Traditional postal mail"], correct: 1, explanation: "That same app-to-device wireless control pattern is the basis for smart home gadgets and industrial robot fleets — it isn't limited to toy robots." }
     ]
   },
   {
@@ -200,12 +200,12 @@ const MODULES = [
       { type: "p", text: "'Autonomous' simply means a machine can operate and make decisions without a human directly controlling every action. A line follower is one of the simplest possible autonomous robots — but it demonstrates the same sense-decide-act loop found in every self-driving vehicle, delivery robot, and autonomous drone in the world today." }
     ],
     quiz: [
-      { q: "What does a line-following robot typically detect?", options: ["Sound waves", "A line on the ground using light sensors", "Wi-Fi signals", "Air temperature"], correct: 1 },
-      { q: "Which type of sensor is most commonly used for line following?", options: ["Microphone", "Infrared (IR) sensor", "Barometer", "Gyroscope only"], correct: 1 },
-      { q: "If only the left sensor detects the line, what should the robot do?", options: ["Turn right", "Stop completely", "Turn left to re-center", "Reverse"], correct: 2 },
-      { q: "What does PID control provide compared to simple on/off turning?", options: ["Louder sound", "Smoother, more precise movement", "Longer battery life only", "Brighter lights"], correct: 1 },
-      { q: "What does 'autonomous' mean in robotics?", options: ["Remote-controlled by a human at all times", "Operating and deciding without direct human control", "Powered only by solar energy", "Unable to move"], correct: 1 },
-      { q: "Line following demonstrates the same core principle used by:", options: ["Paper maps", "Self-driving cars staying centered in a lane", "Static wall posters", "Manual gear shifting"], correct: 1 }
+      { q: "What does a line-following robot typically detect?", options: ["Sound waves", "A line on the ground using light sensors", "Wi-Fi signals", "Air temperature"], correct: 1, explanation: "Line-following robots use light sensors to detect the contrast between a line and the surface around it — not sound, Wi-Fi, or temperature." },
+      { q: "Which type of sensor is most commonly used for line following?", options: ["Microphone", "Infrared (IR) sensor", "Barometer", "Gyroscope only"], correct: 1, explanation: "Infrared (IR) sensors detect the difference in reflected light between a dark line and the lighter surface, making them the standard choice for line following." },
+      { q: "If only the left sensor detects the line, what should the robot do?", options: ["Turn right", "Stop completely", "Turn left to re-center", "Reverse"], correct: 2, explanation: "If the left sensor sees the line, the robot has drifted right, so it should turn left to bring the line back under both sensors and re-center itself." },
+      { q: "What does PID control provide compared to simple on/off turning?", options: ["Louder sound", "Smoother, more precise movement", "Longer battery life only", "Brighter lights"], correct: 1, explanation: "PID control adjusts steering by degree based on how far off-course the robot is, producing smoother, more precise correction than a simple on/off turn." },
+      { q: "What does 'autonomous' mean in robotics?", options: ["Remote-controlled by a human at all times", "Operating and deciding without direct human control", "Powered only by solar energy", "Unable to move"], correct: 1, explanation: "Autonomous means the robot senses its environment and makes decisions on its own, without a human directly steering every move." },
+      { q: "Line following demonstrates the same core principle used by:", options: ["Paper maps", "Self-driving cars staying centered in a lane", "Static wall posters", "Manual gear shifting"], correct: 1, explanation: "Both line-following robots and self-driving cars continuously sense their position relative to a target (a line or lane) and adjust in real time to stay centered." }
     ]
   }
 ];

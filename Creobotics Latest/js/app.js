@@ -846,12 +846,26 @@ function renderQuizQuestion() {
     <div class="card">
       <div class="quiz-question">${escapeHtml(q.q)}</div>
       <div id="quiz-options">
-        ${q.options.map((opt, i) => `
-          <div class="option-tile ${answers[index] === i ? "selected" : ""}" data-option="${i}">
+        ${q.options.map((opt, i) => {
+          const revealed = answers[index] !== null;
+          let cls = "";
+          if (revealed) {
+            if (i === q.correct) cls = "correct";
+            else if (i === answers[index]) cls = "incorrect";
+            cls += " locked";
+          }
+          return `
+          <div class="option-tile ${cls}" data-option="${i}">
             <div class="option-letter">${letters[i]}</div>
             <div>${escapeHtml(opt)}</div>
-          </div>`).join("")}
+          </div>`;
+        }).join("")}
       </div>
+      ${answers[index] !== null
+        ? (answers[index] === q.correct
+            ? `<div class="quiz-feedback quiz-feedback-correct">Correct!</div>`
+            : `<div class="quiz-feedback quiz-feedback-incorrect"><strong>Not quite.</strong> ${escapeHtml(q.explanation || "")}</div>`)
+        : ""}
       <div class="quiz-nav-row">
         ${index > 0 ? `<button class="btn btn-outline" id="quiz-prev">← Previous</button>` : ""}
         <button class="btn btn-primary" id="quiz-next" ${answers[index] === null ? "disabled style='opacity:.5;'" : ""}>
@@ -872,6 +886,9 @@ function attachQuizEvents() {
 
   $all("#quiz-options .option-tile").forEach((tile) => {
     tile.addEventListener("click", () => {
+      // Once an answer has been picked for this question, it's revealed
+      // (green/red) and locked — clicking another option no longer changes it.
+      if (state.quiz.answers[state.quiz.index] !== null) return;
       state.quiz.answers[state.quiz.index] = Number(tile.dataset.option);
       refresh();
     });
