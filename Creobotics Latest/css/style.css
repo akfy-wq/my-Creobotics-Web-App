@@ -1013,3 +1013,171 @@ body.dark .status-pill.locked { background: #2c2044; }
   .welcome-card { flex-direction: row; }
   .page-title { font-size: 1.4rem; }
 }
+/* ---------------- Grades / Admin / Serial Keys ---------------- */
+.grade-block { margin-bottom: 14px; }
+.grade-section { margin-top: 12px; }
+
+.grade-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  border: none;
+  margin: 0;
+  color: inherit;
+}
+.grade-row:hover { box-shadow: var(--shadow); }
+.grade-row-title {
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.grade-row-chevron {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+.grade-row.expanded .grade-row-chevron { transform: rotate(90deg); color: var(--purple); }
+
+.grade-status-tag {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.grade-status-tag.soon { color: var(--ink-soft); background: rgba(120,120,140,0.15); }
+.grade-status-tag.locked { color: #a15c00; background: rgba(255,171,0,0.18); }
+.grade-status-tag.open { color: var(--success); background: rgba(26,143,94,0.14); }
+
+.grade-shs-tag {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--purple-dark);
+  background: var(--purple-light);
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.locked-grade-card { text-align: center; padding: 22px 18px; }
+.locked-grade-card .lg-title { font-weight: 700; font-size: 0.98rem; }
+.locked-grade-card .lg-sub { color: var(--ink-soft); font-size: 0.82rem; margin-top: 4px; }
+
+.access-banner {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 18px;
+}
+.access-banner.active { color: var(--success); font-weight: 600; }
+
+.admin-quiz-row textarea,
+.admin-quiz-row input { margin-bottom: 0; }
+
+#admin-content { resize: vertical; }
+
+.input-wrap input, .input-wrap select, .input-wrap textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid #ece7f6;
+  background: #faf9fd;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--ink);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.input-wrap input:focus, .input-wrap select:focus, .input-wrap textarea:focus {
+  border-color: var(--purple);
+  background: var(--white);
+  outline: none;
+}
+
+.input-wrap textarea { resize: vertical; min-height: 90px; }
+
+/* ---------------- Leaderboard ---------------- */
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px;
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  transition: background 0.15s ease;
+}
+.leaderboard-row:last-child { margin-bottom: 0; }
+.leaderboard-row:hover { background: #faf8fe; }
+.leaderboard-row.top3 { background: linear-gradient(135deg, #f1ecfd, #fdf5ff); }
+.leaderboard-row.me { border: 2px solid var(--purple); background: #f1ecfd; padding: 12px 10px; }
+
+.lb-rank {
+  width: 34px;
+  flex-shrink: 0;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+}
+.leaderboard-row.top3 .lb-rank { font-size: 1.35rem; }
+
+.lb-info { flex: 1; min-width: 0; }
+.lb-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lb-sub { color: var(--ink-soft); font-size: 0.78rem; margin-top: 2px; }
+
+.lb-stats { text-align: right; flex-shrink: 0; }
+.lb-completed { font-weight: 700; font-size: 0.85rem; color: var(--purple); }
+.lb-score { color: var(--ink-soft); font-size: 0.72rem; margin-top: 2px; }
+
+@media (max-width: 480px) {
+  .lb-sub { display: none; }
+  .lb-score { display: none; }
+}
+
+body.dark .leaderboard-row:hover { background: #241a38; }
+body.dark .leaderboard-row.top3 { background: linear-gradient(135deg, #2c2044, #241a38); }
+body.dark .leaderboard-row.me { background: #2c2044; }
+
+/* ---------------- Teacher dashboard ---------------- */
+.teacher-row { cursor: pointer; }
+
+.current-module-tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--purple-dark);
+  background: #f1ecfd;
+  padding: 4px 10px;
+  border-radius: 999px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+body.dark .current-module-tag { background: #2c2044; color: var(--purple-light); }
+
+.course-table tbody tr.current-module-row td { background: #f8f4ff; }
+body.dark .course-table tbody tr.current-module-row td { background: #2c2044; }

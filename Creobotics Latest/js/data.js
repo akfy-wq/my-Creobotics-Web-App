@@ -21,9 +21,33 @@ const AVATARS = [
   { id: "girl-4", gender: "girl", label: "Mint", src: "images/avatars/girl4.svg" },
 ];
 
+// Grade levels Creobotics supports, Grade 4 through Grade 12 (Senior High).
+// Grade 4 ships with the 5 built-in modules below. Grades 5-12 start empty —
+// an admin uploads modules for a grade (see the Admin page) to make that
+// grade appear as "available" to students. Grades 11-12 are flagged as
+// Senior High for display purposes only.
+const GRADES = [
+  { level: 4, label: "Grade 4", seniorHigh: false },
+  { level: 5, label: "Grade 5", seniorHigh: false },
+  { level: 6, label: "Grade 6", seniorHigh: false },
+  { level: 7, label: "Grade 7", seniorHigh: false },
+  { level: 8, label: "Grade 8", seniorHigh: false },
+  { level: 9, label: "Grade 9", seniorHigh: false },
+  { level: 10, label: "Grade 10", seniorHigh: false },
+  { level: 11, label: "Grade 11", seniorHigh: true },
+  { level: 12, label: "Grade 12", seniorHigh: true },
+];
+
+// Grade 4 ships with built-in modules (below), while Grades 5-12 start empty
+// until an admin uploads content. This does NOT mean Grade 4 is free —
+// EVERY grade (4 through 12) requires an active, unexpired serial key to
+// access. See redeemSerialKey() and hasActiveAccess() in app.js.
+const BUILTIN_GRADE = 4;
+
 const MODULES = [
   {
     id: 1,
+    grade: 4,
     title: "Elements of a Robot",
     subtitle: "Sense, Compute, and Act!",
     color: "var(--mod-1)",
@@ -61,6 +85,7 @@ const MODULES = [
   },
   {
     id: 2,
+    grade: 4,
     title: "Robot's Hardware",
     subtitle: "Physical components and their classifications",
     color: "var(--mod-2)",
@@ -104,6 +129,7 @@ const MODULES = [
   },
   {
     id: 3,
+    grade: 4,
     title: "Assembling a Robot",
     subtitle: "Connecting hardware to build a form",
     color: "var(--mod-3)",
@@ -144,6 +170,7 @@ const MODULES = [
   },
   {
     id: 4,
+    grade: 4,
     title: "Makeblock Application",
     subtitle: "Communication and Control",
     color: "var(--mod-4)",
@@ -177,6 +204,7 @@ const MODULES = [
   },
   {
     id: 5,
+    grade: 4,
     title: "Line Follow",
     subtitle: "Building an autonomous machine",
     color: "var(--mod-5)",

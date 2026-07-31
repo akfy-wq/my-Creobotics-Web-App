@@ -19,10 +19,17 @@ const STORAGE_KEYS = {
   users: "creo_users",
   session: "creo_session",
   theme: "creo_theme",
+  customModules: "creo_custom_modules", // admin-uploaded modules for Grades 5-12
+  serialKeys: "creo_serial_keys",       // pool of serial keys admins have generated
+  teacherCodes: "creo_teacher_codes",   // pool of one-time teacher-access codes admins have generated
 };
 
 function progressKey(email) {
   return `creo_progress_${email}`;
+}
+
+function accessKey(email) {
+  return `creo_access_${email}`;
 }
 
 function loadUsers() {
@@ -35,14 +42,7 @@ function saveUsers(users) {
 }
 
 function initialProgress() {
-  const unlocked = {}, completed = {}, highest = {}, history = {};
-  MODULES.forEach((m, i) => {
-    unlocked[m.id] = i === 0; // only the first module starts unlocked
-    completed[m.id] = false;
-    highest[m.id] = 0;
-    history[m.id] = [];
-  });
-  return { unlocked, completed, highest, history };
+  return { completed: {}, highest: {}, history: {} };
 }
 
 function loadProgress(email) {
@@ -52,6 +52,302 @@ function loadProgress(email) {
 
 function saveProgress(email, progress) {
   localStorage.setItem(progressKey(email), JSON.stringify(progress));
+}
+
+/* ============================================================
+   MODULE CONTENT (built-in Grade 4 modules from data.js, plus
+   admin-uploaded modules for Grades 5-12, stored in localStorage)
+   ============================================================ */
+
+function loadCustomModules() {
+  const raw = localStorage.getItem(STORAGE_KEYS.customModules);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveCustomModules(list) {
+  localStorage.setItem(STORAGE_KEYS.customModules, JSON.stringify(list));
+}
+
+// The full catalog: built-in Grade 4 modules + anything an admin has
+// uploaded for other grades. Always call this instead of touching MODULES
+// directly when enumerating "all modules a student might see".
+function getAllModules() {
+  return [...MODULES, ...loadCustomModules()];
+}
+
+function modulesByGrade(grade) {
+  return getAllModules()
+    .filter((m) => m.grade === grade)
+    .sort((a, b) => (a.order || a.id) - (b.order || b.id));
+}
+
+function gradeHasModules(grade) {
+  return getAllModules().some((m) => m.grade === grade);
+}
+
+function nextModuleId() {
+  const all = getAllModules();
+  return all.length ? Math.max(...all.map((m) => m.id)) + 1 : 1;
+}
+
+function addCustomModule(mod) {
+  const list = loadCustomModules();
+  list.push(mod);
+  saveCustomModules(list);
+}
+
+function deleteCustomModule(id) {
+  const list = loadCustomModules().filter((m) => m.id !== id);
+  saveCustomModules(list);
+}
+
+/* ============================================================
+   GRADE ACCESS (serial keys unlock all grades, 4-12, for one year)
+   ============================================================ */
+
+const ACCESS_DAYS = 365;
+
+function loadAccess(email) {
+  const raw = localStorage.getItem(accessKey(email));
+  return raw ? JSON.parse(raw) : null;
+}
+
+function saveAccess(email, access) {
+  localStorage.setItem(accessKey(email), JSON.stringify(access));
+}
+
+function hasActiveAccess(email) {
+  const access = loadAccess(email);
+  return !!access && access.expiresAt > Date.now();
+}
+
+function accessDaysRemaining(email) {
+  const access = loadAccess(email);
+  if (!access) return 0;
+  return Math.max(0, Math.ceil((access.expiresAt - Date.now()) / (1000 * 60 * 60 * 24)));
+}
+
+// Every grade (including Grade 4) requires an active serial-key access
+// window to unlock — see redeemSerialKey below. There is no free grade;
+// admins generate serial keys for students to redeem.
+function isGradeAccessible(grade, email) {
+  return hasActiveAccess(email);
+}
+
+function loadSerialKeys() {
+  const raw = localStorage.getItem(STORAGE_KEYS.serialKeys);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveSerialKeys(keys) {
+  localStorage.setItem(STORAGE_KEYS.serialKeys, JSON.stringify(keys));
+}
+
+function generateSerialCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const group = () =>
+    Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return `CREO-${group()}-${group()}-${group()}`;
+}
+
+function generateSerialKeys(count) {
+  const keys = loadSerialKeys();
+  for (let i = 0; i < count; i++) {
+    keys.push({ code: generateSerialCode(), usedBy: null, usedAt: null, createdAt: Date.now() });
+  }
+  saveSerialKeys(keys);
+  return keys;
+}
+
+// Redeems a serial key for `email`, granting access to every grade (4-12)
+// for one year from the moment of redemption. Returns an error string, or
+// null on success.
+function redeemSerialKey(email, rawCode) {
+  const code = rawCode.trim().toUpperCase();
+  if (!code) return "Enter a serial key.";
+
+  const keys = loadSerialKeys();
+  const key = keys.find((k) => k.code === code);
+  if (!key) return "That serial key isn't valid.";
+  if (key.usedBy) return "That serial key has already been used.";
+
+  key.usedBy = email;
+  key.usedAt = Date.now();
+  saveSerialKeys(keys);
+
+  const now = Date.now();
+  saveAccess(email, {
+    serialKey: code,
+    activatedAt: now,
+    expiresAt: now + ACCESS_DAYS * 24 * 60 * 60 * 1000,
+  });
+  return null;
+}
+
+/* ============================================================
+   ADMIN ACCESS
+   Anyone who knows the admin code can flip their own account into an
+   admin — there's no real backend here, so this is a soft gate (same
+   spirit as the client-side password reset above), not real security.
+   ============================================================ */
+
+const ADMIN_CODE = "CREOADMIN";
+
+function redeemAdminCode(email, rawCode) {
+  const code = rawCode.trim().toUpperCase();
+  if (code !== ADMIN_CODE) return "Incorrect admin code.";
+  const users = loadUsers();
+  const idx = users.findIndex((u) => u.email === email);
+  if (idx === -1) return "Account not found.";
+  users[idx].isAdmin = true;
+  saveUsers(users);
+  return null;
+}
+
+/* ============================================================
+   TEACHER ACCESS
+   Unlike ADMIN_CODE (a fixed constant), teacher access is granted through
+   one-time codes an admin generates from the Admin page — same pattern as
+   serial keys. A student/teacher redeems one from Settings → Teacher
+   Access to unlock the read-only Teacher page (view every student's
+   scores and current module). Each code works once.
+   ============================================================ */
+
+function loadTeacherCodes() {
+  const raw = localStorage.getItem(STORAGE_KEYS.teacherCodes);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveTeacherCodes(codes) {
+  localStorage.setItem(STORAGE_KEYS.teacherCodes, JSON.stringify(codes));
+}
+
+function generateTeacherCodeString() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const group = () =>
+    Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return `TEACH-${group()}-${group()}`;
+}
+
+function generateTeacherCodes(count) {
+  const codes = loadTeacherCodes();
+  for (let i = 0; i < count; i++) {
+    codes.push({ code: generateTeacherCodeString(), usedBy: null, usedAt: null, createdAt: Date.now() });
+  }
+  saveTeacherCodes(codes);
+  return codes;
+}
+
+// Redeems a generated teacher code for `email`, granting permanent access
+// to the read-only Teacher page on that account. Returns an error string,
+// or null on success.
+function redeemTeacherCode(email, rawCode) {
+  const code = rawCode.trim().toUpperCase();
+  if (!code) return "Enter a teacher code.";
+
+  const codes = loadTeacherCodes();
+  const found = codes.find((c) => c.code === code);
+  if (!found) return "That teacher code isn't valid.";
+  if (found.usedBy) return "That teacher code has already been used.";
+
+  const users = loadUsers();
+  const idx = users.findIndex((u) => u.email === email);
+  if (idx === -1) return "Account not found.";
+
+  found.usedBy = email;
+  found.usedAt = Date.now();
+  saveTeacherCodes(codes);
+
+  users[idx].isTeacher = true;
+  saveUsers(users);
+  ensureTeacherClassCode(email);
+  return null;
+}
+
+/* ============================================================
+   CLASS LINKING (which students belong to which teacher)
+   Being "a teacher" (isTeacher) only controls whether the Teacher page is
+   reachable at all. It does NOT by itself say which students are hers —
+   without this, every teacher would see every student on the device. So
+   separately, every teacher account gets its own short, shareable
+   classCode; a student enters that code once (Settings → My Class) to
+   link their account to that specific teacher. The Teacher Dashboard (and
+   the CSV export) only ever shows students linked to the teacher who's
+   currently viewing it. Admins are the one exception — they still see
+   every student, matching their broader oversight role.
+   ============================================================ */
+
+function generateClassCodeString() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I — avoids mix-ups when read aloud/handwritten
+  const code = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return `CLS-${code}`;
+}
+
+// Guarantees a teacher account has a classCode, generating one if this is
+// an older teacher account from before this feature existed. Returns the
+// (possibly newly-created) code.
+function ensureTeacherClassCode(email) {
+  const users = loadUsers();
+  const idx = users.findIndex((u) => u.email === email);
+  if (idx === -1) return null;
+
+  if (!users[idx].classCode) {
+    // Vanishingly unlikely to collide, but check anyway before saving.
+    let code;
+    do {
+      code = generateClassCodeString();
+    } while (users.some((u) => u.classCode === code));
+    users[idx].classCode = code;
+    saveUsers(users);
+  }
+  return users[idx].classCode;
+}
+
+// A student links their account to a teacher by entering that teacher's
+// classCode. Returns an error string, or null on success.
+function joinTeacherClass(studentEmail, rawCode) {
+  const code = rawCode.trim().toUpperCase();
+  if (!code) return "Enter your teacher's class code.";
+
+  const users = loadUsers();
+  const teacher = users.find((u) => u.isTeacher && u.classCode === code);
+  if (!teacher) return "That class code isn't valid.";
+  if (teacher.email === studentEmail) return "You can't join your own class.";
+
+  const idx = users.findIndex((u) => u.email === studentEmail);
+  if (idx === -1) return "Account not found.";
+
+  users[idx].teacherEmail = teacher.email;
+  saveUsers(users);
+  return null;
+}
+
+function leaveTeacherClass(studentEmail) {
+  const users = loadUsers();
+  const idx = users.findIndex((u) => u.email === studentEmail);
+  if (idx === -1) return;
+  users[idx].teacherEmail = null;
+  saveUsers(users);
+}
+
+// The single source of truth for "which students should this viewer see"
+// — used by the Teacher Dashboard table, the CSV export, AND the
+// Leaderboard, so all three always agree with each other:
+//   - Admins see every student on the device.
+//   - Teachers see only students linked to THEM specifically (their class).
+//   - Regular students see their own classmates — everyone sharing the
+//     same teacherEmail they do. If they haven't joined a class yet,
+//     there's no group to show them, so this returns an empty list.
+function visibleStudentsFor(viewerUser) {
+  const summaries = allStudentSummaries();
+  if (viewerUser.isAdmin) return summaries;
+  if (viewerUser.isTeacher) {
+    return summaries.filter((s) => s.user.teacherEmail === viewerUser.email);
+  }
+  if (viewerUser.teacherEmail) {
+    return summaries.filter((s) => s.user.teacherEmail === viewerUser.teacherEmail);
+  }
+  return [];
 }
 
 /* ============================================================
@@ -88,6 +384,10 @@ async function registerUser(name, email, school, password) {
     avatarId: null,
     nickname: null,
     profileComplete: false,
+    isAdmin: false,
+    isTeacher: false,
+    classCode: null,    // set once this account becomes a teacher — students join using this
+    teacherEmail: null, // which teacher's class this student has joined, if any
   });
   saveUsers(users);
   return null; // success
@@ -216,19 +516,114 @@ function recordQuizAttempt(email, moduleId, scorePercent) {
   }
   if (scorePercent >= PASSING_SCORE) {
     progress.completed[moduleId] = true;
-    const nextId = moduleId + 1;
-    if (MODULES.find((m) => m.id === nextId)) {
-      progress.unlocked[nextId] = true;
-    }
   }
   saveProgress(email, progress);
   return progress;
 }
 
-function completionPercentage(progress) {
-  const total = MODULES.length;
-  const done = Object.values(progress.completed).filter(Boolean).length;
-  return Math.round((done / total) * 100);
+// A module is unlocked when: (1) its grade is accessible (every grade, 4-12,
+// needs active serial-key access), and (2) it's the first module
+// in that grade, or the module right before it (within the same grade) has
+// been passed. Computed on the fly so that redeeming/expiring a serial key
+// immediately unlocks/relocks the right modules without any migration.
+function isModuleUnlocked(mod, progress, email) {
+  if (!isGradeAccessible(mod.grade, email)) return false;
+  const siblings = modulesByGrade(mod.grade);
+  const idx = siblings.findIndex((m) => m.id === mod.id);
+  if (idx <= 0) return true;
+  const prev = siblings[idx - 1];
+  return !!progress.completed[prev.id];
+}
+
+function moduleLockedMessage(mod) {
+  if (mod && !isGradeAccessible(mod.grade, state.user.email)) {
+    return `Grade ${mod.grade} needs an active serial key. Redeem one to unlock it.`;
+  }
+  return "Complete the previous module with 80%+ to unlock this one.";
+}
+
+function completionPercentage(progress, email) {
+  const accessible = getAllModules().filter((m) => isGradeAccessible(m.grade, email));
+  if (!accessible.length) return 0;
+  const done = accessible.filter((m) => progress.completed[m.id]).length;
+  return Math.round((done / accessible.length) * 100);
+}
+
+/* ============================================================
+   TEACHER / LEADERBOARD HELPERS
+   Aggregate every registered account's saved progress so it can be shown
+   to a teacher/admin, or ranked on the Leaderboard. Since Creobotics has
+   no backend, "every registered account" only means accounts that have
+   signed up in this same browser's localStorage (see README).
+   ============================================================ */
+
+// Figures out where a given student currently stands: the next unlocked-
+// but-not-yet-passed module (in grade/order sequence) they should be
+// working on, or a "done"/"none" status if they've finished everything
+// accessible to them or have no grade access at all. Mirrors the logic
+// findContinueModuleId() uses for the logged-in user, generalized to work
+// for any student email (needed by the Teacher dashboard).
+function currentModuleFor(user, progress) {
+  const pool = getAllModules()
+    .filter((m) => isGradeAccessible(m.grade, user.email))
+    .sort((a, b) => a.grade - b.grade || (a.order || a.id) - (b.order || b.id));
+
+  if (!pool.length) return { status: "none", module: null };
+
+  const next = pool.find((m) => isModuleUnlocked(m, progress, user.email) && !progress.completed[m.id]);
+  if (next) return { status: "in-progress", module: next };
+
+  // Nothing left to do — either every accessible module is completed, or
+  // (edge case) none are unlocked yet. Report the most advanced one either
+  // way so the teacher has something concrete to look at.
+  const lastUnlocked = pool.slice().reverse().find((m) => isModuleUnlocked(m, progress, user.email));
+  return { status: "done", module: lastUnlocked || pool[0] };
+}
+
+// Short label for the "Current Module" column/badge in the Teacher table.
+function currentModuleLabel(current) {
+  if (current.status === "none") return "No grade access";
+  if (current.status === "done") return "All caught up";
+  return `Grade ${current.module.grade}: ${escapeHtml(current.module.title)}`;
+}
+
+// One row's worth of stats for a single student — reused by the Teacher
+// table, the student-detail modal, and the Leaderboard.
+function studentSummary(user) {
+  const progress = loadProgress(user.email);
+  const allModules = getAllModules();
+  const completedCount = allModules.filter((m) => progress.completed[m.id]).length;
+  const scores = Object.values(progress.highest);
+  const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+  return {
+    user,
+    progress,
+    completedCount,
+    totalModules: allModules.length,
+    percent: allModules.length ? Math.round((completedCount / allModules.length) * 100) : 0,
+    avgScore,
+    accessActive: hasActiveAccess(user.email),
+    accessDaysLeft: accessDaysRemaining(user.email),
+    currentModule: currentModuleFor(user, progress),
+  };
+}
+
+function allStudentSummaries() {
+  return loadUsers().map(studentSummary);
+}
+
+// Small round avatar used in the Teacher table and Leaderboard rows —
+// mirrors renderAvatar() but works for *any* user, not just the logged-in
+// one, and accepts a size in pixels.
+function renderUserAvatar(user, sizePx) {
+  const av = user.avatarId ? AVATARS.find((a) => a.id === user.avatarId) : null;
+  const initialsSource = (user.nickname || user.name || "?").trim();
+  const initials = initialsSource.charAt(0).toUpperCase() || "?";
+  const style = `width:${sizePx}px; height:${sizePx}px; font-size:${Math.round(sizePx * 0.42)}px; flex-shrink:0;`;
+  if (av) {
+    return `<div class="avatar" style="${style}"><img src="${av.src}" alt="${escapeHtml(av.label)} avatar" /></div>`;
+  }
+  return `<div class="avatar" style="${style}">${initials}</div>`;
 }
 
 /* ============================================================
@@ -242,6 +637,9 @@ const state = {
   activeModuleId: null,
   calendarOffset: 0,
   quiz: { questions: [], index: 0, answers: [] },
+  // Which grade rows are expanded on the eBook Modules page (accordion —
+  // collapsed by default, toggled on click). Not persisted; resets per visit.
+  expandedGrades: new Set(),
 };
 
 function $(sel) { return document.querySelector(sel); }
@@ -333,10 +731,30 @@ function switchAuthView(target) {
   $("#view-app").classList.add("hidden");
 }
 
+function showAdminNavItem() {
+  const sidebarItem = $("#nav-admin-item");
+  const bottomItem = $("#bottom-nav-admin-item");
+  const show = !!(state.user && state.user.isAdmin);
+  if (sidebarItem) sidebarItem.classList.toggle("hidden", !show);
+  if (bottomItem) bottomItem.classList.toggle("hidden", !show);
+}
+
+// Admins can also open the Teacher page (it's just a read-only view of
+// everyone's scores), so either flag reveals the nav item.
+function showTeacherNavItem() {
+  const sidebarItem = $("#nav-teacher-item");
+  const bottomItem = $("#bottom-nav-teacher-item");
+  const show = !!(state.user && (state.user.isTeacher || state.user.isAdmin));
+  if (sidebarItem) sidebarItem.classList.toggle("hidden", !show);
+  if (bottomItem) bottomItem.classList.toggle("hidden", !show);
+}
+
 function enterApp() {
   $("#view-login").classList.add("hidden");
   $("#view-signup").classList.add("hidden");
   state.progress = loadProgress(state.user.email);
+  showAdminNavItem();
+  showTeacherNavItem();
 
   // First time in (or an older account from before this feature existed):
   // pick an avatar + nickname before ever seeing the dashboard.
@@ -466,6 +884,9 @@ function navigate(page, opts = {}) {
     case "quiz-result": main.innerHTML = renderQuizResult(opts.result); attachResultEvents(opts.result); break;
     case "profile": main.innerHTML = renderProfile(); attachProfileEvents(); break;
     case "settings": main.innerHTML = renderSettings(); attachSettingsEvents(); break;
+    case "admin": main.innerHTML = renderAdmin(); attachAdminEvents(); break;
+    case "teacher": main.innerHTML = renderTeacher(); attachTeacherEvents(); break;
+    case "leaderboard": main.innerHTML = renderLeaderboard(); attachLeaderboardEvents(); break;
     case "about": main.innerHTML = renderAbout(); break;
     default: main.innerHTML = "<p>Page not found.</p>";
   }
@@ -542,28 +963,48 @@ function renderSmallRing(percent) {
   `;
 }
 
+// Every module across every grade the current user can currently access
+// (only grades with active serial-key access count).
+function accessibleModules(email) {
+  return getAllModules().filter((m) => isGradeAccessible(m.grade, email));
+}
+
 function findContinueModuleId() {
-  const next = MODULES.find((m) => state.progress.unlocked[m.id] && !state.progress.completed[m.id]);
-  return next ? next.id : MODULES[0].id;
+  const pool = accessibleModules(state.user.email);
+  const next = pool.find((m) => isModuleUnlocked(m, state.progress, state.user.email) && !state.progress.completed[m.id]);
+  return next ? next.id : (pool[0] ? pool[0].id : null);
 }
 
 /* ---- Dashboard (Home) ---- */
 function renderHome() {
   const p = state.progress;
+  const pool = accessibleModules(state.user.email);
   const continueId = findContinueModuleId();
+
+  if (!pool.length) {
+    return `
+      <div class="topbar">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-subtitle">Welcome back, ${escapeHtml(state.user.nickname || state.user.name)}</div>
+        </div>
+      </div>
+      <div class="card" style="text-align:center;">No modules are available yet.</div>
+    `;
+  }
 
   // Feature row: spotlight up to 3 modules the learner hasn't finished yet,
   // starting with whatever "Continue Learning" points to. If everything is
   // finished, just show the first 3 modules instead.
-  const notCompleted = MODULES.filter((m) => !p.completed[m.id]);
-  const featured = (notCompleted.length ? notCompleted : MODULES)
+  const notCompleted = pool.filter((m) => !p.completed[m.id]);
+  const featured = (notCompleted.length ? notCompleted : pool)
     .slice()
     .sort((a, b) => (a.id === continueId ? -1 : b.id === continueId ? 1 : a.id - b.id))
     .slice(0, 3);
 
   // Quiz Progress list: continue-module first (highlighted), then the next
   // couple of unlocked modules — mirrors the "Homework progress" panel.
-  const unlockedModules = MODULES.filter((m) => p.unlocked[m.id]);
+  const unlockedModules = pool.filter((m) => isModuleUnlocked(m, p, state.user.email));
   const progressList = [
     ...unlockedModules.filter((m) => m.id === continueId),
     ...unlockedModules.filter((m) => m.id !== continueId),
@@ -585,7 +1026,7 @@ function renderHome() {
         <div class="feature-row">
           ${featured
             .map((m) => {
-              const unlocked = p.unlocked[m.id];
+              const unlocked = isModuleUnlocked(m, p, state.user.email);
               return `
               <div class="feature-card ${unlocked ? "" : "locked"}" style="background:${m.color};" data-module-id="${m.id}">
                 <div>
@@ -616,8 +1057,8 @@ function renderHome() {
               </tr>
             </thead>
             <tbody>
-              ${MODULES.map((m) => {
-                const unlocked = p.unlocked[m.id];
+              ${pool.map((m) => {
+                const unlocked = isModuleUnlocked(m, p, state.user.email);
                 const completed = p.completed[m.id];
                 const score = p.highest[m.id] || 0;
                 let statusLabel = "Locked", statusClass = "locked";
@@ -631,7 +1072,7 @@ function renderHome() {
                       <div class="course-name-cell">
                         <div class="course-mini-icon" style="background:${m.color};">${m.id}</div>
                         <div>
-                          <div>${escapeHtml(m.title)}</div>
+                          <div>Grade ${m.grade} — ${escapeHtml(m.title)}</div>
                           <div class="cn-sub">${escapeHtml(m.subtitle)}</div>
                         </div>
                       </div>
@@ -665,7 +1106,7 @@ function renderHome() {
                 ${renderSmallRing(score)}
                 <div>
                   <div class="pi-title">${escapeHtml(m.title)}</div>
-                  <div class="pi-sub">Module ${m.id} of ${MODULES.length}</div>
+                  <div class="pi-sub">Grade ${m.grade}</div>
                 </div>
                 <div class="pi-arrow">&rsaquo;</div>
               </div>`;
@@ -682,8 +1123,9 @@ function attachHomeEvents() {
   $all(".feature-card").forEach((card) => {
     card.addEventListener("click", () => {
       const id = Number(card.dataset.moduleId);
-      if (!state.progress.unlocked[id]) {
-        showToast("Complete the previous module with 80%+ to unlock this one.");
+      const mod = getAllModules().find((m) => m.id === id);
+      if (!mod || !isModuleUnlocked(mod, state.progress, state.user.email)) {
+        showToast(moduleLockedMessage(mod));
         return;
       }
       navigate("lesson", { moduleId: id });
@@ -694,8 +1136,9 @@ function attachHomeEvents() {
   $all(".course-table tbody tr").forEach((row) => {
     row.addEventListener("click", () => {
       const id = Number(row.dataset.moduleId);
-      if (!state.progress.unlocked[id]) {
-        showToast("Complete the previous module with 80%+ to unlock this one.");
+      const mod = getAllModules().find((m) => m.id === id);
+      if (!mod || !isModuleUnlocked(mod, state.progress, state.user.email)) {
+        showToast(moduleLockedMessage(mod));
         return;
       }
       navigate("lesson", { moduleId: id });
@@ -720,11 +1163,12 @@ function attachHomeEvents() {
   if (nextBtn) nextBtn.addEventListener("click", () => { state.calendarOffset++; navigate("home"); });
 }
 
-/* ---- Module list ---- */
-function renderModuleCard(m) {
-  const unlocked = state.progress.unlocked[m.id];
-  const completed = state.progress.completed[m.id];
-  const score = state.progress.highest[m.id] || 0;
+/* ---- Module list (grouped by Grade 4-12) ---- */
+function renderModuleCard(m, mods) {
+  const p = mods.progress;
+  const unlocked = isModuleUnlocked(m, p, mods.email);
+  const completed = p.completed[m.id];
+  const score = p.highest[m.id] || 0;
   let scoreLine = "";
   if (completed) {
     scoreLine = `<div class="module-score pass">Best score: ${score}%</div>`;
@@ -734,9 +1178,9 @@ function renderModuleCard(m) {
   const statusIcon = !unlocked ? "Locked" : completed ? "Done" : "Go";
   return `
     <div class="card module-card ${unlocked ? "" : "locked"}" data-module-id="${m.id}" style="margin-bottom:12px;">
-      <div class="module-icon" style="background:${m.color};">${m.id}</div>
+      <div class="module-icon" style="background:${m.color || 'var(--purple)'};">${m.id}</div>
       <div class="module-info">
-        <div class="m-title">Module ${m.id}: ${escapeHtml(m.title)}</div>
+        <div class="m-title">${escapeHtml(m.title)}</div>
         <div class="m-sub">${escapeHtml(m.subtitle)}</div>
         ${scoreLine}
       </div>
@@ -748,8 +1192,9 @@ function attachModuleCardClicks(containerSel) {
   $all(`${containerSel} .module-card`).forEach((card) => {
     card.addEventListener("click", () => {
       const id = Number(card.dataset.moduleId);
-      if (!state.progress.unlocked[id]) {
-        showToast("Complete the previous module with 80%+ to unlock this one.");
+      const mod = getAllModules().find((m) => m.id === id);
+      if (!mod || !isModuleUnlocked(mod, state.progress, state.user.email)) {
+        showToast(moduleLockedMessage(mod));
         return;
       }
       navigate("lesson", { moduleId: id });
@@ -757,20 +1202,122 @@ function attachModuleCardClicks(containerSel) {
   });
 }
 
+// Grade sections are collapsed by default — only the grade-level row is
+// shown (no module counts anywhere). Clicking a grade row toggles it open,
+// and only then does its content (locked message or the actual modules)
+// render in the body below it. Which grades are currently open lives in
+// state.expandedGrades so it survives re-renders within the same page visit.
+function renderGradeSection(grade) {
+  const email = state.user.email;
+  const mods = modulesByGrade(grade.level);
+  const hasContent = mods.length > 0;
+  const accessible = isGradeAccessible(grade.level, email);
+  const expanded = state.expandedGrades.has(grade.level);
+
+  let body;
+  if (!hasContent) {
+    body = `
+      <div class="card locked-grade-card">
+        <div class="lg-title">Coming soon</div>
+        <div class="lg-sub">No modules have been uploaded for ${escapeHtml(grade.label)} yet.</div>
+      </div>`;
+  } else if (!accessible) {
+    body = `
+      <div class="card locked-grade-card">
+        <div class="lg-title">Locked</div>
+        <div class="lg-sub">Redeem a serial key to unlock ${escapeHtml(grade.label)} for one year.</div>
+        <button class="btn btn-primary btn-sm redeem-serial-btn" style="margin-top:10px; width:auto;">Redeem Serial Key</button>
+      </div>`;
+  } else {
+    body = mods.map((m) => renderModuleCard(m, { progress: state.progress, email })).join("");
+  }
+
+  const statusTag = !hasContent
+    ? '<span class="grade-status-tag soon">Coming soon</span>'
+    : !accessible
+      ? '<span class="grade-status-tag locked">Locked</span>'
+      : '<span class="grade-status-tag open">Unlocked</span>';
+
+  return `
+    <div class="grade-block" data-grade="${grade.level}">
+      <button type="button" class="card grade-row ${expanded ? "expanded" : ""}" data-grade-toggle="${grade.level}">
+        <span class="grade-row-title">
+          ${escapeHtml(grade.label)}${grade.seniorHigh ? ' <span class="grade-shs-tag">Senior High</span>' : ""}
+          ${statusTag}
+        </span>
+        <span class="grade-row-chevron">›</span>
+      </button>
+      <div class="grade-section ${expanded ? "" : "hidden"}">${body}</div>
+    </div>
+  `;
+}
+
 function renderModuleList() {
+  const accessBanner = accessStatusBanner();
   return `
     <div class="topbar">
       <div>
         <div class="page-title">Robotics eBook</div>
-        <div class="page-subtitle">5 modules ( pass each quiz with 80%+ to unlock the next )</div>
+        <div class="page-subtitle">Grade 4 through Grade 12 — tap a grade to view its modules. Pass each quiz with 80%+ to unlock the next one.</div>
       </div>
     </div>
-    <div id="full-module-list">${MODULES.map(renderModuleCard).join("")}</div>
+    ${accessBanner}
+    ${GRADES.map(renderGradeSection).join("")}
   `;
 }
 
+// Small banner shown at the top of the Modules page summarizing access
+// status. No grade is free — every grade (4-12) needs an active serial key.
+function accessStatusBanner() {
+  const email = state.user.email;
+  if (hasActiveAccess(email)) {
+    const days = accessDaysRemaining(email);
+    return `<div class="card access-banner active">Serial-key access is active for all grades — ${days} day${days === 1 ? "" : "s"} remaining.</div>`;
+  }
+  return `<div class="card access-banner">All grades (4-12) are locked until you redeem a serial key from an admin. <button class="btn btn-outline btn-sm redeem-serial-btn" style="width:auto; margin-left:8px;">Redeem Serial Key</button></div>`;
+}
+
 function attachModuleListEvents() {
-  attachModuleCardClicks("#full-module-list");
+  // Toggle open/closed in place (no full re-render / scroll jump) — just
+  // flip the tracked state and the two classes that control the chevron
+  // rotation and the hidden body.
+  $all("[data-grade-toggle]").forEach((row) => {
+    row.addEventListener("click", () => {
+      const level = Number(row.dataset.gradeToggle);
+      const body = row.parentElement.querySelector(".grade-section");
+      const nowExpanded = !state.expandedGrades.has(level);
+      if (nowExpanded) {
+        state.expandedGrades.add(level);
+      } else {
+        state.expandedGrades.delete(level);
+      }
+      row.classList.toggle("expanded", nowExpanded);
+      if (body) body.classList.toggle("hidden", !nowExpanded);
+    });
+  });
+  attachModuleCardClicks("#main-content");
+  $all(".redeem-serial-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openRedeemSerialModal();
+    });
+  });
+}
+
+function openRedeemSerialModal() {
+  showFormModal({
+    title: "Redeem Serial Key",
+    description: "Unlocks every grade (4-12) for one year from today.",
+    fields: [{ id: "code", label: "Serial Key", type: "text", placeholder: "CREO-XXXX-XXXX-XXXX" }],
+    confirmLabel: "Redeem",
+    onSubmit: async ({ code }) => {
+      const err = redeemSerialKey(state.user.email, code || "");
+      if (err) return err;
+      showToast("Serial key redeemed! All grades are unlocked for one year.");
+      navigate(state.currentPage === "home" ? "home" : "modules");
+      return null;
+    },
+  });
 }
 
 /* ---- Lesson ---- */
@@ -784,14 +1331,17 @@ function renderContentBlock(block) {
 }
 
 function renderLesson(moduleId) {
-  const m = MODULES.find((x) => x.id === moduleId);
+  const m = getAllModules().find((x) => x.id === moduleId);
+  const color = m.color || "var(--purple)";
+  const siblingCount = modulesByGrade(m.grade).length;
+  const position = modulesByGrade(m.grade).findIndex((x) => x.id === m.id) + 1;
   return `
-    <div class="lesson-hero" style="background: linear-gradient(135deg, ${m.color}, var(--purple));">
-      <div class="hero-badge">Module ${m.id} of ${MODULES.length}</div>
+    <div class="lesson-hero" style="background: linear-gradient(135deg, ${color}, var(--purple));">
+      <div class="hero-badge">Grade ${m.grade} · Module ${position} of ${siblingCount}</div>
       <h1>${escapeHtml(m.title)}</h1>
     </div>
     <div class="lesson-body">
-      <div class="lesson-content-block" style="border-color: ${m.color}; background: linear-gradient(135deg, ${m.color}, var(--purple));">
+      <div class="lesson-content-block" style="border-color: ${color}; background: linear-gradient(135deg, ${color}, var(--purple));">
         <p class="lesson-subtitle">${escapeHtml(m.subtitle)}</p>
         ${m.content.map(renderContentBlock).join("")}
       </div>
@@ -817,7 +1367,7 @@ function shuffle(arr) {
 }
 
 function renderQuizStart(moduleId) {
-  const m = MODULES.find((x) => x.id === moduleId);
+  const m = getAllModules().find((x) => x.id === moduleId);
   state.quiz.questions = shuffle(m.quiz);
   state.quiz.index = 0;
   state.quiz.answers = new Array(state.quiz.questions.length).fill(null);
@@ -826,7 +1376,7 @@ function renderQuizStart(moduleId) {
 
 function renderQuizQuestion() {
   const { questions, index, answers } = state.quiz;
-  const m = MODULES.find((x) => x.id === state.activeModuleId);
+  const m = getAllModules().find((x) => x.id === state.activeModuleId);
   const q = questions[index];
   const pct = Math.round(((index + 1) / questions.length) * 100);
   const letters = ["A", "B", "C", "D"];
@@ -926,9 +1476,10 @@ function submitQuiz() {
 
 /* ---- Quiz result ---- */
 function renderQuizResult(result) {
-  const m = MODULES.find((x) => x.id === result.moduleId);
+  const m = getAllModules().find((x) => x.id === result.moduleId);
   const passed = result.score >= PASSING_SCORE;
-  const hasNext = MODULES.some((x) => x.id === result.moduleId + 1);
+  const siblings = modulesByGrade(m.grade);
+  const hasNext = siblings.findIndex((x) => x.id === m.id) < siblings.length - 1;
 
   return `
     <div class="result-wrap" style="margin-top:20px;">
@@ -942,7 +1493,7 @@ function renderQuizResult(result) {
         <p style="color:var(--ink-soft);">${result.correct} out of ${result.total} correct</p>
         <p style="color:var(--ink-soft); font-size:0.8rem; margin-top:6px;">Passing score: ${PASSING_SCORE}%</p>
 
-        ${passed && hasNext ? `<div class="unlock-banner">Module ${result.moduleId + 1} is now unlocked!</div>` : ""}
+        ${passed && hasNext ? `<div class="unlock-banner">The next module is now unlocked!</div>` : ""}
 
         <div style="margin-top:22px; display:flex; flex-direction:column; gap:10px;">
           <button class="btn btn-primary" id="result-primary-btn">
@@ -968,8 +1519,8 @@ function attachResultEvents(result) {
 function renderProfile() {
   const p = state.progress;
 
-  const rows = MODULES.map((m) => {
-    const unlocked = p.unlocked[m.id];
+  const rows = accessibleModules(state.user.email).map((m) => {
+    const unlocked = isModuleUnlocked(m, p, state.user.email);
     const completed = p.completed[m.id];
     const score = p.highest[m.id] || 0;
     let sub = "Locked";
@@ -979,11 +1530,11 @@ function renderProfile() {
       <div class="card" style="display:flex; align-items:center; gap:14px; margin-bottom:10px;">
         <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft); background:#f1ecfd; padding:4px 9px; border-radius:999px; flex-shrink:0;">${icon}</div>
         <div style="flex:1;">
-          <div style="font-weight:700;">Module ${m.id}: ${escapeHtml(m.title)}</div>
+          <div style="font-weight:700;">Grade ${m.grade}: ${escapeHtml(m.title)}</div>
           <div style="color:var(--ink-soft); font-size:0.85rem;">${sub}</div>
         </div>
       </div>`;
-  }).join("");
+  }).join("") || `<div class="card" style="text-align:center; color:var(--ink-soft);">No modules available yet.</div>`;
 
   return `
     <div class="topbar">
@@ -1055,6 +1606,10 @@ function attachProfileEvents() {
 /* ---- Settings ---- */
 function renderSettings() {
   const isDark = document.body.classList.contains("dark");
+  const email = state.user.email;
+  const active = hasActiveAccess(email);
+  const days = accessDaysRemaining(email);
+
   return `
     <div class="topbar"><div class="page-title">Settings</div></div>
 
@@ -1084,8 +1639,24 @@ function renderSettings() {
       </div>
     </div>
 
+    <h3 style="color:var(--white); margin-bottom:12px;">Grade Access</h3>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="settings-row">
+        <div class="settings-row-left">
+          <div class="settings-icon"></div>
+          <div>
+            <div style="font-weight:600;">Grades 4-12</div>
+            <div style="color:var(--ink-soft); font-size:0.8rem;">
+              ${active ? `Active — ${days} day${days === 1 ? "" : "s"} remaining` : "No active serial key. Every grade, including Grade 4, stays locked until you redeem one."}
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" id="settings-redeem-btn">${active ? "Redeem Another Key" : "Redeem Serial Key"}</button>
+      </div>
+    </div>
+
     <h3 style="color:var(--white); margin-bottom:12px;">Account</h3>
-    <div class="card">
+    <div class="card" style="margin-bottom:16px;">
       <div class="settings-row">
         <div class="settings-row-left">
           <div class="settings-icon"></div>
@@ -1107,7 +1678,69 @@ function renderSettings() {
         <button class="btn btn-outline btn-sm" id="change-password-btn">Change</button>
       </div>
     </div>
+
+    <h3 style="color:var(--white); margin-bottom:12px;">Admin Access</h3>
+    <div class="card">
+      <div class="settings-row">
+        <div class="settings-row-left">
+          <div class="settings-icon"></div>
+          <div>
+            <div style="font-weight:600;">${state.user.isAdmin ? "Admin access is enabled" : "Enter Admin Code"}</div>
+            <div style="color:var(--ink-soft); font-size:0.8rem;">${state.user.isAdmin ? "You can upload modules and generate serial keys." : "Have an admin code? Enter it to unlock the Admin page."}</div>
+          </div>
+        </div>
+        ${state.user.isAdmin
+          ? `<button class="btn btn-outline btn-sm" id="go-admin-btn">Open Admin</button>`
+          : `<button class="btn btn-outline btn-sm" id="admin-code-btn">Enter Code</button>`}
+      </div>
+    </div>
+
+    <h3 style="color:var(--white); margin: 24px 0 12px;">Teacher Access</h3>
+    <div class="card">
+      <div class="settings-row">
+        <div class="settings-row-left">
+          <div class="settings-icon"></div>
+          <div>
+            <div style="font-weight:600;">${state.user.isTeacher ? "Teacher access is enabled" : "Enter Teacher Code"}</div>
+            <div style="color:var(--ink-soft); font-size:0.8rem;">${state.user.isTeacher ? "You can view every student's scores and progress." : "Ask an admin for a teacher code, then enter it here to unlock the read-only Teacher page."}</div>
+          </div>
+        </div>
+        ${state.user.isTeacher
+          ? `<button class="btn btn-outline btn-sm" id="go-teacher-btn">Open Teacher</button>`
+          : `<button class="btn btn-outline btn-sm" id="teacher-code-btn">Enter Code</button>`}
+      </div>
+    </div>
+
+    ${!state.user.isAdmin ? `
+    <h3 style="color:var(--white); margin: 24px 0 12px;">My Class</h3>
+    <div class="card">
+      <div class="settings-row">
+        <div class="settings-row-left">
+          <div class="settings-icon"></div>
+          <div>
+            <div style="font-weight:600;">${state.user.teacherEmail ? "Linked to a teacher" : "Not linked to a teacher yet"}</div>
+            <div style="color:var(--ink-soft); font-size:0.8rem;">${
+              state.user.teacherEmail
+                ? `Your scores and progress are visible to ${escapeHtml(getTeacherDisplayName(state.user.teacherEmail))} on their Teacher Dashboard.`
+                : "Get a class code from your teacher and enter it here so your progress shows up on their dashboard."
+            }</div>
+          </div>
+        </div>
+        ${state.user.teacherEmail
+          ? `<button class="btn btn-outline btn-sm" id="leave-class-btn">Leave Class</button>`
+          : `<button class="btn btn-outline btn-sm" id="join-class-btn">Enter Class Code</button>`}
+      </div>
+    </div>` : ""}
   `;
+}
+
+// Friendly name for a teacher's account, used in the student-facing "My
+// Class" settings section. Falls back gracefully if the teacher account
+// can't be found for some reason (e.g. edge-case data cleanup).
+function getTeacherDisplayName(teacherEmail) {
+  const teacher = loadUsers().find((u) => u.email === teacherEmail);
+  if (!teacher) return "your teacher";
+  return teacher.nickname || teacher.name;
 }
 
 function attachSettingsEvents() {
@@ -1119,7 +1752,7 @@ function attachSettingsEvents() {
   $("#reset-btn").addEventListener("click", () => {
     showModal({
       title: "Reset Progress?",
-      body: "This will lock all modules except Module 1 and clear every quiz score. This cannot be undone.",
+      body: "This will lock every module you've unlocked by passing a quiz, and clear every quiz score. Grade access from serial keys is not affected. This cannot be undone.",
       confirmLabel: "Reset",
       confirmClass: "btn-danger",
       onConfirm: () => {
@@ -1178,7 +1811,680 @@ function attachSettingsEvents() {
       },
     });
   });
+
+  const settingsRedeemBtn = $("#settings-redeem-btn");
+  if (settingsRedeemBtn) settingsRedeemBtn.addEventListener("click", openRedeemSerialModal);
+
+  const goAdminBtn = $("#go-admin-btn");
+  if (goAdminBtn) goAdminBtn.addEventListener("click", () => navigate("admin"));
+
+  const adminCodeBtn = $("#admin-code-btn");
+  if (adminCodeBtn) {
+    adminCodeBtn.addEventListener("click", () => {
+      showFormModal({
+        title: "Enter Admin Code",
+        description: "Grants access to the Admin page on this account.",
+        fields: [{ id: "code", label: "Admin Code", type: "text", placeholder: "Admin code" }],
+        confirmLabel: "Unlock",
+        onSubmit: async ({ code }) => {
+          const err = redeemAdminCode(state.user.email, code || "");
+          if (err) return err;
+          state.user = getCurrentUser();
+          showAdminNavItem();
+          showToast("Admin access enabled.");
+          navigate("settings");
+          return null;
+        },
+      });
+    });
+  }
+
+  const goTeacherBtn = $("#go-teacher-btn");
+  if (goTeacherBtn) goTeacherBtn.addEventListener("click", () => navigate("teacher"));
+
+  const teacherCodeBtn = $("#teacher-code-btn");
+  if (teacherCodeBtn) {
+    teacherCodeBtn.addEventListener("click", () => {
+      showFormModal({
+        title: "Enter Teacher Code",
+        description: "Grants access to the read-only Teacher page on this account.",
+        fields: [{ id: "code", label: "Teacher Code", type: "text", placeholder: "Teacher code" }],
+        confirmLabel: "Unlock",
+        onSubmit: async ({ code }) => {
+          const err = redeemTeacherCode(state.user.email, code || "");
+          if (err) return err;
+          state.user = getCurrentUser();
+          showTeacherNavItem();
+          showToast("Teacher access enabled.");
+          navigate("settings");
+          return null;
+        },
+      });
+    });
+  }
+
+  const joinClassBtn = $("#join-class-btn");
+  if (joinClassBtn) {
+    joinClassBtn.addEventListener("click", () => {
+      showFormModal({
+        title: "Enter Class Code",
+        description: "Ask your teacher for their class code so your progress shows up on their dashboard.",
+        fields: [{ id: "code", label: "Class Code", type: "text", placeholder: "e.g. CLS-4F9K2P" }],
+        confirmLabel: "Join",
+        onSubmit: async ({ code }) => {
+          const err = joinTeacherClass(state.user.email, code || "");
+          if (err) return err;
+          state.user = getCurrentUser();
+          showToast("You've joined your teacher's class.");
+          navigate("settings");
+          return null;
+        },
+      });
+    });
+  }
+
+  const leaveClassBtn = $("#leave-class-btn");
+  if (leaveClassBtn) {
+    leaveClassBtn.addEventListener("click", () => {
+      showModal({
+        title: "Leave this class?",
+        body: "Your teacher will no longer see your scores or progress on their dashboard. You can rejoin anytime with a class code.",
+        confirmLabel: "Leave Class",
+        confirmClass: "btn-danger",
+        onConfirm: () => {
+          leaveTeacherClass(state.user.email);
+          state.user = getCurrentUser();
+          showToast("You've left the class.");
+          navigate("settings");
+        },
+      });
+    });
+  }
 }
+
+/* ---- Admin ---- */
+// Turns a block of pasted/typed text into lesson content blocks: blank
+// lines separate paragraphs; a run of lines starting with "- " becomes a
+// bullet list.
+function parseLessonText(text) {
+  const blocks = [];
+  const chunks = text.split(/\r?\n\s*\r?\n/).map((c) => c.trim()).filter(Boolean);
+  chunks.forEach((chunk) => {
+    const lines = chunk.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (lines.every((l) => l.startsWith("- "))) {
+      blocks.push({ type: "ul", items: lines.map((l) => l.replace(/^-\s*/, "")) });
+    } else {
+      blocks.push({ type: "p", text: lines.join(" ") });
+    }
+  });
+  return blocks;
+}
+
+let adminQuizRows = 1;
+
+function renderAdminQuizRow(n) {
+  return `
+    <div class="card admin-quiz-row" data-row="${n}" style="margin-bottom:12px;">
+      <div class="field"><label>Question ${n}</label><div class="input-wrap"><input type="text" class="aq-question" placeholder="Question text" /></div></div>
+      <div class="grid grid-2" style="margin-top:4px;">
+        ${["A", "B", "C", "D"].map((l, i) => `
+          <div class="field">
+            <label>Option ${l}</label>
+            <div class="input-wrap" style="display:flex; align-items:center; gap:8px;">
+              <input type="radio" name="aq-correct-${n}" value="${i}" ${i === 0 ? "checked" : ""} style="width:auto;" />
+              <input type="text" class="aq-option" data-index="${i}" placeholder="Option ${l}" />
+            </div>
+          </div>`).join("")}
+      </div>
+      <div class="field"><label>Explanation (shown if wrong)</label><div class="input-wrap"><input type="text" class="aq-explanation" placeholder="Why the correct answer is correct" /></div></div>
+    </div>`;
+}
+
+function renderAdmin() {
+  if (!state.user.isAdmin) {
+    return `
+      <div class="topbar"><div class="page-title">Admin</div></div>
+      <div class="card" style="text-align:center;">You don't have admin access.</div>
+    `;
+  }
+
+  const keys = loadSerialKeys();
+  const keyRows = keys.length
+    ? keys.slice().reverse().map((k) => `
+        <tr>
+          <td style="font-family:monospace;">${escapeHtml(k.code)}</td>
+          <td><span class="status-pill ${k.usedBy ? "done" : "progress"}">${k.usedBy ? "Used" : "Available"}</span></td>
+          <td>${k.usedBy ? escapeHtml(k.usedBy) : "—"}</td>
+        </tr>`).join("")
+    : `<tr><td colspan="3" style="color:var(--ink-soft);">No serial keys generated yet.</td></tr>`;
+
+  const teacherCodes = loadTeacherCodes();
+  const teacherCodeRows = teacherCodes.length
+    ? teacherCodes.slice().reverse().map((k) => `
+        <tr>
+          <td style="font-family:monospace;">${escapeHtml(k.code)}</td>
+          <td><span class="status-pill ${k.usedBy ? "done" : "progress"}">${k.usedBy ? "Used" : "Available"}</span></td>
+          <td>${k.usedBy ? escapeHtml(k.usedBy) : "—"}</td>
+        </tr>`).join("")
+    : `<tr><td colspan="3" style="color:var(--ink-soft);">No teacher codes generated yet.</td></tr>`;
+
+  // Grade 4's built-in modules aren't admin-uploaded content, so it's left
+  // out of the upload dropdown and "Manage" button — but it still requires
+  // a redeemed serial key like every other grade (no grade is free).
+  const gradeOptions = GRADES.filter((g) => g.level !== BUILTIN_GRADE)
+    .map((g) => `<option value="${g.level}">${escapeHtml(g.label)}</option>`).join("");
+
+  const catalogRows = GRADES.map((g) => {
+    const count = modulesByGrade(g.level).length;
+    return `
+      <div class="settings-row">
+        <div class="settings-row-left">
+          <div class="settings-icon"></div>
+          <div>
+            <div style="font-weight:600;">${escapeHtml(g.label)}</div>
+            <div style="color:var(--ink-soft); font-size:0.8rem;">${count} module${count === 1 ? "" : "s"}${g.level === BUILTIN_GRADE ? " · Built-in" : ""} · Requires serial key</div>
+          </div>
+        </div>
+        ${g.level === BUILTIN_GRADE ? "" : `<button class="btn btn-outline btn-sm admin-manage-grade" data-grade="${g.level}" ${count ? "" : "disabled style='opacity:.5;'"}>Manage</button>`}
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="topbar"><div class="page-title">Admin</div></div>
+
+    <h3 style="color:var(--white); margin-bottom:12px;">Grade Catalog</h3>
+    <div class="card" style="margin-bottom:20px;">${catalogRows}</div>
+
+    <h3 style="color:var(--white); margin-bottom:12px;">Serial Keys</h3>
+    <div class="card" style="margin-bottom:20px;">
+      <p style="color:var(--ink-soft); font-size:0.85rem; margin-bottom:12px;">Each key grants one student one year of access to every grade (4-12) once redeemed. No grade is free — students need a key to access any of them.</p>
+      <div style="display:flex; gap:10px; align-items:flex-end; margin-bottom:16px;">
+        <div class="field" style="margin:0;">
+          <label for="admin-key-count">How many keys?</label>
+          <div class="input-wrap"><input id="admin-key-count" type="number" min="1" max="100" value="1" /></div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="admin-generate-keys" style="width:auto;">Generate</button>
+      </div>
+      <table class="course-table">
+        <thead><tr><th>Code</th><th>Status</th><th>Used By</th></tr></thead>
+        <tbody id="admin-key-rows">${keyRows}</tbody>
+      </table>
+    </div>
+
+    <h3 style="color:var(--white); margin-bottom:12px;">Teacher Codes</h3>
+    <div class="card" style="margin-bottom:20px;">
+      <p style="color:var(--ink-soft); font-size:0.85rem; margin-bottom:12px;">Each code grants one account permanent, read-only access to the Teacher Dashboard (every student's scores and current module). Give one to a teacher, then have them redeem it from Settings &rarr; Teacher Access. Each code works once.</p>
+      <div style="display:flex; gap:10px; align-items:flex-end; margin-bottom:16px;">
+        <div class="field" style="margin:0;">
+          <label for="admin-teacher-code-count">How many codes?</label>
+          <div class="input-wrap"><input id="admin-teacher-code-count" type="number" min="1" max="100" value="1" /></div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="admin-generate-teacher-codes" style="width:auto;">Generate</button>
+      </div>
+      <table class="course-table">
+        <thead><tr><th>Code</th><th>Status</th><th>Used By</th></tr></thead>
+        <tbody id="admin-teacher-code-rows">${teacherCodeRows}</tbody>
+      </table>
+    </div>
+
+    <h3 style="color:var(--white); margin-bottom:12px;">Upload a Module</h3>
+    <div class="card" style="margin-bottom:20px;">
+      <div id="admin-upload-error" class="error-banner hidden"></div>
+      <div class="field">
+        <label for="admin-grade">Grade</label>
+        <div class="input-wrap"><select id="admin-grade">${gradeOptions}</select></div>
+      </div>
+      <div class="field">
+        <label for="admin-title">Module Title</label>
+        <div class="input-wrap"><input id="admin-title" type="text" placeholder="e.g. Intro to Sensors" /></div>
+      </div>
+      <div class="field">
+        <label for="admin-subtitle">Subtitle</label>
+        <div class="input-wrap"><input id="admin-subtitle" type="text" placeholder="A short tagline" /></div>
+      </div>
+      <div class="field">
+        <label for="admin-content">Lesson Content</label>
+        <div class="input-wrap">
+          <textarea id="admin-content" rows="8" placeholder="Write each paragraph as its own block, separated by a blank line. For a bullet list, start every line in that block with '- '."></textarea>
+        </div>
+      </div>
+
+      <div style="font-weight:700; margin:18px 0 10px;">Quiz Questions</div>
+      <div id="admin-quiz-rows">${renderAdminQuizRow(1)}</div>
+      <button type="button" class="btn btn-outline btn-sm" id="admin-add-question" style="width:auto; margin-bottom:16px;">+ Add Question</button>
+
+      <button type="button" class="btn btn-primary" id="admin-publish-module">Publish Module</button>
+    </div>
+
+    <h3 style="color:var(--white); margin-bottom:12px;">Uploaded Modules</h3>
+    <div class="card" id="admin-uploaded-list">
+      ${loadCustomModules().length
+        ? loadCustomModules().map((m) => `
+          <div class="settings-row">
+            <div class="settings-row-left">
+              <div class="settings-icon"></div>
+              <div>
+                <div style="font-weight:600;">Grade ${m.grade}: ${escapeHtml(m.title)}</div>
+                <div style="color:var(--ink-soft); font-size:0.8rem;">${escapeHtml(m.subtitle)}</div>
+              </div>
+            </div>
+            <button class="btn btn-danger btn-sm admin-delete-module" data-id="${m.id}">Delete</button>
+          </div>`).join("")
+        : `<div style="color:var(--ink-soft); text-align:center;">No uploaded modules yet.</div>`}
+    </div>
+  `;
+}
+
+function attachAdminEvents() {
+  if (!state.user.isAdmin) return;
+
+  adminQuizRows = 1;
+
+  $("#admin-generate-keys").addEventListener("click", () => {
+    const count = Math.max(1, Math.min(100, Number($("#admin-key-count").value) || 1));
+    generateSerialKeys(count);
+    showToast(`Generated ${count} serial key${count === 1 ? "" : "s"}.`);
+    navigate("admin");
+  });
+
+  $("#admin-generate-teacher-codes").addEventListener("click", () => {
+    const count = Math.max(1, Math.min(100, Number($("#admin-teacher-code-count").value) || 1));
+    generateTeacherCodes(count);
+    showToast(`Generated ${count} teacher code${count === 1 ? "" : "s"}.`);
+    navigate("admin");
+  });
+
+  $("#admin-add-question").addEventListener("click", () => {
+    adminQuizRows++;
+    $("#admin-quiz-rows").insertAdjacentHTML("beforeend", renderAdminQuizRow(adminQuizRows));
+  });
+
+  $("#admin-publish-module").addEventListener("click", () => {
+    const errBox = $("#admin-upload-error");
+    errBox.classList.add("hidden");
+
+    const grade = Number($("#admin-grade").value);
+    const title = $("#admin-title").value.trim();
+    const subtitle = $("#admin-subtitle").value.trim();
+    const contentText = $("#admin-content").value.trim();
+
+    if (!title) return showAdminError(errBox, "Enter a module title.");
+    if (!subtitle) return showAdminError(errBox, "Enter a subtitle.");
+    if (!contentText) return showAdminError(errBox, "Enter the lesson content.");
+
+    const quiz = [];
+    const rows = $all("#admin-quiz-rows .admin-quiz-row");
+    for (const row of rows) {
+      const qText = row.querySelector(".aq-question").value.trim();
+      const optionInputs = Array.from(row.querySelectorAll(".aq-option"));
+      const options = optionInputs.map((i) => i.value.trim());
+      const explanation = row.querySelector(".aq-explanation").value.trim();
+      const correctRadio = row.querySelector(`input[type="radio"]:checked`);
+      if (!qText || options.some((o) => !o)) {
+        return showAdminError(errBox, "Fill in every question and all four options.");
+      }
+      quiz.push({ q: qText, options, correct: Number(correctRadio.value), explanation });
+    }
+    if (!quiz.length) return showAdminError(errBox, "Add at least one quiz question.");
+
+    const mod = {
+      id: nextModuleId(),
+      grade,
+      order: modulesByGrade(grade).length + 1,
+      title,
+      subtitle,
+      color: "var(--purple)",
+      content: parseLessonText(contentText),
+      quiz,
+    };
+    addCustomModule(mod);
+    showToast(`Module published to Grade ${grade}.`);
+    navigate("admin");
+  });
+
+  $all(".admin-manage-grade").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const list = $("#admin-uploaded-list");
+      if (list) list.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  $all(".admin-delete-module").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      showModal({
+        title: "Delete Module?",
+        body: "Students will lose access to this module. This cannot be undone.",
+        confirmLabel: "Delete",
+        confirmClass: "btn-danger",
+        onConfirm: () => {
+          deleteCustomModule(id);
+          showToast("Module deleted.");
+          navigate("admin");
+        },
+      });
+    });
+  });
+
+  function showAdminError(box, msg) {
+    box.textContent = msg;
+    box.classList.remove("hidden");
+  }
+}
+
+/* ---- Teacher ---- */
+function renderTeacher() {
+  if (!(state.user.isTeacher || state.user.isAdmin)) {
+    return `
+      <div class="topbar"><div class="page-title">Teacher</div></div>
+      <div class="card" style="text-align:center;">You don't have teacher access. Unlock it from Settings &rarr; Teacher Access.</div>
+    `;
+  }
+
+  // Refresh state.user in case classCode was just generated (e.g. an
+  // older teacher account visiting this page for the first time since
+  // class-linking was added).
+  if (state.user.isTeacher && !state.user.isAdmin) {
+    ensureTeacherClassCode(state.user.email);
+    state.user = getCurrentUser();
+  }
+
+  const summaries = visibleStudentsFor(state.user).sort((a, b) => b.completedCount - a.completedCount);
+  const totalStudents = summaries.length;
+  const avgClassScore = totalStudents
+    ? Math.round(summaries.reduce((sum, s) => sum + s.avgScore, 0) / totalStudents)
+    : 0;
+  const activeCount = summaries.filter((s) => s.accessActive).length;
+
+  const emptyMessage = state.user.isAdmin
+    ? "No students have signed up on this browser yet."
+    : "No students have joined your class yet — share your class code above so they can link their account to you.";
+
+  const rows = summaries.length
+    ? summaries
+        .map(
+          (s) => `
+        <tr data-email="${escapeHtml(s.user.email)}" class="teacher-row">
+          <td>
+            <div class="course-name-cell">
+              ${renderUserAvatar(s.user, 34)}
+              <div>
+                <div>${escapeHtml(s.user.nickname || s.user.name)}</div>
+                <div class="cn-sub">${escapeHtml(s.user.email)}</div>
+              </div>
+            </div>
+          </td>
+          <td>${escapeHtml(s.user.school || "—")}</td>
+          <td>
+            ${s.currentModule.status === "done"
+              ? `<span class="status-pill done">All caught up</span>`
+              : s.currentModule.status === "none"
+                ? `<span class="status-pill locked">No grade access</span>`
+                : `<span class="current-module-tag">${currentModuleLabel(s.currentModule)}</span>`}
+          </td>
+          <td>${s.completedCount} / ${s.totalModules}</td>
+          <td>${s.avgScore}%</td>
+          <td><span class="status-pill ${s.accessActive ? "done" : "locked"}">${s.accessActive ? "Active" : "No Access"}</span></td>
+        </tr>`
+        )
+        .join("")
+    : `<tr><td colspan="6" style="color:var(--ink-soft); text-align:center; padding:18px 0;">${emptyMessage}</td></tr>`;
+
+  const classCodeCard = (!state.user.isAdmin && state.user.isTeacher)
+    ? `
+    <div class="card" style="margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+      <div>
+        <div style="font-weight:600;">Your Class Code</div>
+        <div style="color:var(--ink-soft); font-size:0.85rem;">Share this with your students — they enter it in Settings &rarr; My Class to link their progress to you.</div>
+      </div>
+      <div style="font-family:monospace; font-size:1.3rem; font-weight:700; letter-spacing:0.05em; background:#f1ecfd; color:var(--purple); padding:8px 16px; border-radius:10px;">${escapeHtml(state.user.classCode || "—")}</div>
+    </div>`
+    : "";
+
+  return `
+    <div class="topbar">
+      <div>
+        <div class="page-title">Teacher Dashboard</div>
+        <div class="page-subtitle">${state.user.isAdmin ? "Every student's progress, on this device" : "Students who have joined your class"}</div>
+      </div>
+      <button class="btn btn-primary btn-sm" id="teacher-export-csv" style="width:auto;">Export CSV</button>
+    </div>
+
+    ${classCodeCard}
+
+    <div class="grid grid-2" style="margin-bottom:20px;">
+      <div class="card stat-card">
+        <div class="stat-badge" style="background:#f1ecfd; color:var(--purple);">${totalStudents}</div>
+        <div><div class="stat-value">${totalStudents}</div><div class="stat-label">Students</div></div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-badge" style="background:rgba(47,174,102,0.14); color:var(--success);">${activeCount}</div>
+        <div><div class="stat-value">${activeCount}</div><div class="stat-label">With Active Access</div></div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-badge" style="background:rgba(240,166,77,0.16); color:#c97a1c;">${avgClassScore}%</div>
+        <div><div class="stat-value">${avgClassScore}%</div><div class="stat-label">Average Quiz Score</div></div>
+      </div>
+    </div>
+
+    <h3 style="color:var(--white); margin-bottom:12px;">All Students</h3>
+    <div class="card">
+      <p style="color:var(--ink-soft); font-size:0.85rem; margin-bottom:14px;">Tap a student to see their full per-module breakdown.</p>
+      <table class="course-table">
+        <thead><tr><th>Student</th><th>School</th><th>Current Module</th><th>Completed</th><th>Avg Score</th><th>Access</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function attachTeacherEvents() {
+  if (!(state.user.isTeacher || state.user.isAdmin)) return;
+  $all(".teacher-row").forEach((row) => {
+    row.addEventListener("click", () => openStudentDetailModal(row.dataset.email));
+  });
+
+  const exportBtn = $("#teacher-export-csv");
+  if (exportBtn) exportBtn.addEventListener("click", downloadTeacherGradebookCSV);
+}
+
+// Read-only per-module breakdown for one student, opened from the Teacher
+// table. Reuses the generic modal shell (showModal/showFormModal build
+// their own markup, so this one constructs the modal directly).
+function openStudentDetailModal(email) {
+  const user = loadUsers().find((u) => u.email === email);
+  if (!user) return;
+  const summary = studentSummary(user);
+
+  const rowsHtml = getAllModules()
+    .slice()
+    .sort((a, b) => a.grade - b.grade || (a.order || a.id) - (b.order || b.id))
+    .map((m) => {
+      const completed = summary.progress.completed[m.id];
+      const score = summary.progress.highest[m.id] || 0;
+      const attempts = (summary.progress.history[m.id] || []).length;
+      const isCurrent = summary.currentModule.status === "in-progress" && summary.currentModule.module.id === m.id;
+      let statusLabel = completed ? "Completed" : attempts ? "In Progress" : "Not Started";
+      let statusClass = completed ? "done" : attempts ? "progress" : "locked";
+      if (isCurrent) { statusLabel = "Current Module"; statusClass = "progress"; }
+      return `
+        <tr class="${isCurrent ? "current-module-row" : ""}">
+          <td>Grade ${m.grade}: ${escapeHtml(m.title)}</td>
+          <td>${attempts ? `${score}%` : "—"}</td>
+          <td>${attempts}</td>
+          <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
+        </tr>`;
+    })
+    .join("");
+
+  const currentSummaryLine = summary.currentModule.status === "in-progress"
+    ? `Currently on: <strong>Grade ${summary.currentModule.module.grade} — ${escapeHtml(summary.currentModule.module.title)}</strong>`
+    : summary.currentModule.status === "done"
+      ? "All accessible modules completed"
+      : "No grade access yet";
+
+  const root = $("#modal-root");
+  root.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal-box" style="max-width:560px; text-align:left;">
+        <div style="text-align:center; margin-bottom:18px;">
+          ${renderUserAvatar(user, 64)}
+          <h3 style="margin-top:10px; margin-bottom:2px;">${escapeHtml(user.nickname || user.name)}</h3>
+          <p style="margin:0;">${escapeHtml(user.email)}${user.school ? ` &middot; ${escapeHtml(user.school)}` : ""}</p>
+          <p style="margin-top:6px; font-size:0.85rem; color:var(--ink-soft);">${currentSummaryLine}</p>
+        </div>
+        <div style="max-height:360px; overflow-y:auto;">
+          <table class="course-table">
+            <thead><tr><th>Module</th><th>Best Score</th><th>Attempts</th><th>Status</th></tr></thead>
+            <tbody>${rowsHtml || `<tr><td colspan="4" style="color:var(--ink-soft); text-align:center; padding:14px 0;">No modules exist yet.</td></tr>`}</tbody>
+          </table>
+        </div>
+        <div class="modal-actions" style="margin-top:18px;">
+          <button class="btn btn-primary" id="modal-cancel" style="width:100%;">Close</button>
+        </div>
+      </div>
+    </div>`;
+  root.querySelector("#modal-cancel").addEventListener("click", () => (root.innerHTML = ""));
+}
+
+/* ---- Teacher: export gradebook as CSV (opens cleanly in Excel/Sheets) ----
+   Fixed format: one row per student, one column per module (in Grade →
+   order sequence), plus summary columns at the end. Column set is the
+   same every export — a student with no attempts on a module just gets
+   a blank cell there, so the sheet lines up the same way every time,
+   the way a teacher's existing gradebook usually does. */
+
+// Wraps a single CSV field in quotes (and escapes any quotes inside it)
+// whenever it contains a comma, quote, or newline — otherwise returns it
+// as-is. Needed because names/schools can contain commas.
+function csvField(value) {
+  const str = String(value ?? "");
+  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+function buildTeacherGradebookCSV() {
+  const summaries = visibleStudentsFor(state.user);
+  const modules = getAllModules()
+    .slice()
+    .sort((a, b) => a.grade - b.grade || (a.order || a.id) - (b.order || b.id));
+
+  const header = [
+    "Name",
+    "Email",
+    "School",
+    ...modules.map((m) => `Grade ${m.grade}: ${m.title}`),
+    "Completed Modules",
+    "Total Modules",
+    "Average Score (%)",
+    "Access Status",
+  ];
+
+  const rows = summaries.map((s) => {
+    const moduleScores = modules.map((m) => {
+      const attempts = (s.progress.history[m.id] || []).length;
+      return attempts ? (s.progress.highest[m.id] || 0) : ""; // blank = never attempted
+    });
+    return [
+      s.user.nickname || s.user.name,
+      s.user.email,
+      s.user.school || "",
+      ...moduleScores,
+      s.completedCount,
+      s.totalModules,
+      s.avgScore,
+      s.accessActive ? "Active" : "No Access",
+    ];
+  });
+
+  return [header, ...rows]
+    .map((row) => row.map(csvField).join(","))
+    .join("\n");
+}
+
+function downloadTeacherGradebookCSV() {
+  const summaries = visibleStudentsFor(state.user);
+  if (!summaries.length) {
+    showToast("No students to export yet.");
+    return;
+  }
+
+  const csvContent = buildTeacherGradebookCSV();
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const dateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const scopeLabel = state.user.isAdmin ? "all-students" : (state.user.classCode || "my-class");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `creobotics-gradebook-${scopeLabel}-${dateStr}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast("Gradebook CSV downloaded.");
+}
+
+/* ---- Leaderboard ---- */
+// Ranked by total modules completed (across every grade), tie-broken by
+// average quiz score, WITHIN the viewer's own class (see
+// visibleStudentsFor) — not every student on the device. Visible to
+// every logged-in user, not just teachers/admins — it's meant as light
+// gamification for students too, but only against their actual classmates.
+function renderLeaderboard() {
+  const pool = visibleStudentsFor(state.user);
+  const ranked = pool.slice().sort((a, b) => {
+    if (b.completedCount !== a.completedCount) return b.completedCount - a.completedCount;
+    return b.avgScore - a.avgScore;
+  });
+  const myEmail = state.user.email;
+  const medals = ["🥇", "🥈", "🥉"];
+
+  const noClassMessage = (!state.user.isAdmin && !state.user.isTeacher && !state.user.teacherEmail)
+    ? `<div style="color:var(--ink-soft); text-align:center; padding:18px 0;">Join a class from Settings &rarr; My Class to see how you rank against your classmates.</div>`
+    : `<div style="color:var(--ink-soft); text-align:center; padding:18px 0;">No students here yet — be the first to complete a module!</div>`;
+
+  const rows = ranked.length
+    ? ranked
+        .map((s, i) => {
+          const isMe = s.user.email === myEmail;
+          const rankLabel = i < 3 ? medals[i] : `#${i + 1}`;
+          return `
+        <div class="leaderboard-row ${isMe ? "me" : ""} ${i < 3 ? "top3" : ""}">
+          <div class="lb-rank">${rankLabel}</div>
+          ${renderUserAvatar(s.user, 46)}
+          <div class="lb-info">
+            <div class="lb-name">${escapeHtml(s.user.nickname || s.user.name)}${isMe ? " (You)" : ""}</div>
+            <div class="lb-sub">${escapeHtml(s.user.school || "—")}</div>
+          </div>
+          <div class="lb-stats">
+            <div class="lb-completed">${s.completedCount} module${s.completedCount === 1 ? "" : "s"}</div>
+            <div class="lb-score">${s.avgScore}% avg score</div>
+          </div>
+        </div>`;
+        })
+        .join("")
+    : noClassMessage;
+
+  const subtitle = state.user.isAdmin
+    ? "Ranked by modules completed across every grade — every student"
+    : "Ranked by modules completed across every grade — your class only";
+
+  return `
+    <div class="topbar">
+      <div>
+        <div class="page-title">Leaderboard</div>
+        <div class="page-subtitle">${subtitle}</div>
+      </div>
+    </div>
+    <div class="card" style="padding:14px;">${rows}</div>
+  `;
+}
+
+function attachLeaderboardEvents() {}
 
 /* ---- About ---- */
 function renderAbout() {
