@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Creobotics — Learn Robotics, Anywhere</title>
-<meta name="description" content="Creobotics: an offline-friendly, browser-based robotics learning app with modules, quizzes, and progress tracking." />
+<meta name="description" content="Creobotics: A robotics learning app with modules, quizzes, and progress tracking." />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css" />
@@ -26,7 +26,6 @@
         <p class="auth-subtitle">Log in to continue learning robotics</p>
 
         <div id="login-error" class="error-banner hidden"></div>
-        <div id="login-success" class="success-banner hidden"></div>
 
         <form id="login-form">
           <div class="field">
@@ -45,10 +44,9 @@
           <button type="submit" class="btn btn-primary">Get Started</button>
         </form>
 
-        <p class="auth-switch" style="margin-top:10px; margin-bottom:0;">
+        <p class="auth-switch">
           <button type="button" id="forgot-password-link">Forgot password?</button>
         </p>
-
         <p class="auth-switch">Don't have an account?
           <button type="button" id="go-signup">Sign Up</button>
         </p>
@@ -113,7 +111,7 @@
     </div>
   </section>
 
-  <!-- ============ PROFILE SETUP: AVATAR + NICKNAME (first thing after auth) ============ -->
+  <!-- ============ PROFILE SETUP ============ -->
   <section id="view-avatar-setup" class="view hidden">
     <div class="brand-bar">
       <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
@@ -144,11 +142,11 @@
     </div>
   </section>
 
-  <!-- ============ MAIN APP SHELL (post-login) ============ -->
+  <!-- ============ MAIN APP SHELL ============ -->
   <section id="view-app" class="view hidden">
     <div class="app-shell">
 
-      <!-- Sidebar (desktop) -->
+      <!-- Sidebar -->
       <aside class="sidebar">
         <div class="brand-bar" style="padding:0;">
           <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
@@ -169,10 +167,8 @@
         </div>
       </aside>
 
-      <!-- Main content: pages are rendered here by JS -->
-      <main class="main-content" id="main-content">
-        <!-- JS injects page markup here -->
-      </main>
+      <!-- Main content -->
+      <main class="main-content" id="main-content"></main>
     </div>
 
     <!-- Mobile bottom nav -->
@@ -194,10 +190,12 @@
 <!-- Toast notification -->
 <div id="toast"></div>
 
-<!-- Modal root (confirm dialogs injected here) -->
+<!-- Modal root -->
 <div id="modal-root"></div>
 
+<!-- ===== SCRIPTS ===== -->
 <script src="js/data.js"></script>
-<script src="js/app.js"></script>
+<script type="module" src="js/app.js"></script>
+
 </body>
 </html>
