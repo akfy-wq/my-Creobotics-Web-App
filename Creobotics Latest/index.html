@@ -14,8 +14,112 @@
 
 <div id="app">
 
+  <!-- ============ AUTH: ROLE SELECT VIEW ============ -->
+  <section id="view-role-select" class="view">
+    <div class="auth-split">
+
+      <!-- Brand / story panel -->
+      <div class="auth-panel-brand">
+        <svg class="circuit-art" viewBox="0 0 520 640" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <g class="circuit-lines">
+            <path d="M -10 120 H 140 V 40 H 320" />
+            <path d="M -10 260 H 90 V 340 H 260 V 220 H 480" />
+            <path d="M -10 420 H 180 V 500 H 380 V 420 H 530" />
+            <path d="M 340 40 V 180 H 530" />
+            <path d="M 60 560 H 220 V 640" />
+            <path d="M 300 560 H 420 V 500" />
+          </g>
+          <g class="circuit-nodes">
+            <circle cx="140" cy="120" r="6" />
+            <circle cx="320" cy="40" r="6" />
+            <circle cx="90" cy="260" r="6" />
+            <circle cx="260" cy="340" r="6" />
+            <circle cx="480" cy="220" r="6" />
+            <circle cx="180" cy="420" r="6" />
+            <circle cx="380" cy="500" r="6" />
+            <circle cx="340" cy="180" r="6" />
+            <circle cx="220" cy="560" r="6" />
+            <circle cx="420" cy="500" r="6" />
+          </g>
+        </svg>
+
+        <div class="brand-bar">
+          <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
+          <div class="brand-name">Creobotics</div>
+        </div>
+
+        <div class="auth-pitch">
+          <h2>Build your robotics brain, one module at a time.</h2>
+          <p>32 guided lessons from Grade 4 through Senior High — hardware, sensors, coding, and autonomous behavior, all in the browser.</p>
+          <ul class="pitch-list">
+            <li><span class="pitch-dot"></span>Bite-sized lessons with quizzes that unlock the next one</li>
+            <li><span class="pitch-dot"></span>Track your progress, streaks, and best scores</li>
+            <li><span class="pitch-dot"></span>Works offline, right in your browser</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Role selection panel -->
+      <div class="auth-panel-form">
+        <div class="auth-wrap">
+          <div class="auth-card auth-card-wide">
+            <div class="brand-bar auth-card-brand">
+              <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
+              <div class="brand-name brand-name-dark">Creobotics</div>
+            </div>
+
+            <h1 class="auth-title">Hi there!</h1>
+            <p class="auth-subtitle">Please select your role to continue.</p>
+
+            <div class="role-select-list">
+              <button type="button" class="role-option role-option-student" data-role="student">
+                <span class="role-option-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/></svg>
+                </span>
+                <span class="role-option-text">
+                  <span class="role-option-title">Student</span>
+                  <span class="role-option-desc">Learn robotics through guided lessons and quizzes</span>
+                </span>
+                <span class="role-option-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </span>
+              </button>
+
+              <button type="button" class="role-option role-option-teacher" data-role="teacher">
+                <span class="role-option-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h16v12H7l-4 4V3Z"/><path d="M18 8h4v10l-3-2H10"/></svg>
+                </span>
+                <span class="role-option-text">
+                  <span class="role-option-title">Teacher</span>
+                  <span class="role-option-desc">Guide students and track class progress</span>
+                </span>
+                <span class="role-option-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </span>
+              </button>
+
+              <button type="button" class="role-option role-option-admin" data-role="admin">
+                <span class="role-option-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                </span>
+                <span class="role-option-text">
+                  <span class="role-option-title">Admin</span>
+                  <span class="role-option-desc">Manage serial keys, accounts, and content</span>
+                </span>
+                <span class="role-option-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
   <!-- ============ AUTH: LOGIN VIEW ============ -->
-  <section id="view-login" class="view">
+  <section id="view-login" class="view hidden">
     <div class="auth-split">
 
       <!-- Brand / story panel -->
@@ -70,6 +174,11 @@
 
             <h1 class="auth-title">Welcome back</h1>
             <p class="auth-subtitle">Log in to continue learning robotics</p>
+
+            <button type="button" class="role-badge" id="login-role-badge">
+              <span id="login-role-badge-text">Student</span>
+              <span class="role-badge-change">Change</span>
+            </button>
 
             <div id="login-error" class="error-banner hidden"></div>
             <div id="login-success" class="success-banner hidden"></div>
@@ -159,6 +268,11 @@
 
             <h1 class="auth-title">Join Creobotics</h1>
             <p class="auth-subtitle">Create a free account to start learning</p>
+
+            <button type="button" class="role-badge" id="signup-role-badge">
+              <span id="signup-role-badge-text">Student</span>
+              <span class="role-badge-change">Change</span>
+            </button>
 
             <div id="signup-error" class="error-banner hidden"></div>
 

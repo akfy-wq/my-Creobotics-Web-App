@@ -330,7 +330,7 @@ function emailExists(email) {
   return loadUsers().some((u) => u.email.toLowerCase() === email.toLowerCase());
 }
 
-async function registerUser(name, email, school, password) {
+async function registerUser(name, email, school, password, role) {
   if (emailExists(email)) {
     return "An account with this email already exists.";
   }
@@ -339,6 +339,7 @@ async function registerUser(name, email, school, password) {
     name: name.trim(),
     email: email.trim().toLowerCase(),
     school: school.trim(),
+    role: role || "student",
     passwordHash: await hashPassword(password),
     avatarId: null,
     nickname: null,
@@ -348,13 +349,17 @@ async function registerUser(name, email, school, password) {
   return null;
 }
 
-async function loginUser(email, password) {
+async function loginUser(email, password, role) {
   const users = loadUsers();
   const hash = await hashPassword(password);
   const match = users.find(
     (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.passwordHash === hash
   );
   if (!match) return "Invalid email or password.";
+  const accountRole = match.role || "student";
+  if (role && accountRole !== role) {
+    return `This account is registered as ${ROLE_LABELS[accountRole] || accountRole}. Please go back and select "${ROLE_LABELS[accountRole] || accountRole}" to log in.`;
+  }
   localStorage.setItem(STORAGE_KEYS.session, match.email);
   return null;
 }
@@ -524,8 +529,11 @@ function levelTitle(level) {
    UI STATE + HELPERS
    ============================================================ */
 
+const ROLE_LABELS = { student: "Student", teacher: "Teacher", admin: "Admin" };
+
 const state = {
   user: null,
+  selectedRole: "student",
   progress: null,
   currentPage: "home",
   activeModuleId: null,
@@ -618,10 +626,22 @@ function showFormModal({ title, description, fields, confirmLabel, onSubmit }) {
 }
 
 function switchAuthView(target) {
+  $("#view-role-select").classList.toggle("hidden", target !== "role-select");
   $("#view-login").classList.toggle("hidden", target !== "login");
   $("#view-signup").classList.toggle("hidden", target !== "signup");
   $("#view-avatar-setup").classList.add("hidden");
   $("#view-app").classList.add("hidden");
+
+  if (target === "login" || target === "signup") {
+    const label = ROLE_LABELS[state.selectedRole] || "Student";
+    const badgeText = $(`#${target}-role-badge-text`);
+    if (badgeText) badgeText.textContent = label;
+  }
+}
+
+function selectRole(role) {
+  state.selectedRole = role;
+  switchAuthView("login");
 }
 
 function enterApp() {
@@ -2019,6 +2039,12 @@ function init() {
     enterApp();
   }
 
+  $all(".role-option").forEach((btn) => {
+    btn.addEventListener("click", () => selectRole(btn.dataset.role));
+  });
+  $("#login-role-badge").addEventListener("click", () => switchAuthView("role-select"));
+  $("#signup-role-badge").addEventListener("click", () => switchAuthView("role-select"));
+
   $("#go-signup").addEventListener("click", () => switchAuthView("signup"));
   $("#go-login").addEventListener("click", () => switchAuthView("login"));
 
@@ -2063,7 +2089,7 @@ function init() {
     const errBox = $("#login-error");
     errBox.classList.add("hidden");
 
-    const err = await loginUser(email, password);
+    const err = await loginUser(email, password, state.selectedRole);
     if (err) {
       errBox.textContent = err;
       errBox.classList.remove("hidden");
@@ -2089,7 +2115,7 @@ function init() {
     if (password.length < 6) return showFieldError(errBox, "Password must be at least 6 characters.");
     if (password !== confirm) return showFieldError(errBox, "Passwords do not match.");
 
-    const err = await registerUser(name, email, school, password);
+    const err = await registerUser(name, email, school, password, state.selectedRole);
     if (err) return showFieldError(errBox, err);
 
     showToast("Account created! Please log in.");
@@ -2116,7 +2142,7 @@ function init() {
         logoutUser();
         state.user = null;
         state.progress = null;
-        switchAuthView("login");
+        switchAuthView("role-select");
       },
     });
   });
