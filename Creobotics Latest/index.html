@@ -4,9 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Creobotics — Learn Robotics, Anywhere</title>
-<meta name="description" content="Creobotics: A robotics learning app with modules, quizzes, and progress tracking." />
+<meta name="description" content="Creobotics: an offline-friendly, browser-based robotics learning app with modules, quizzes, and progress tracking." />
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -15,110 +16,206 @@
 
   <!-- ============ AUTH: LOGIN VIEW ============ -->
   <section id="view-login" class="view">
-    <div class="brand-bar">
-      <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
-      <div class="brand-name">Creobotics</div>
-    </div>
-    <div class="auth-wrap">
-      <div class="auth-card">
-        <div class="auth-icon"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
-        <h1 class="auth-title">Welcome back</h1>
-        <p class="auth-subtitle">Log in to continue learning robotics</p>
+    <div class="auth-split">
 
-        <div id="login-error" class="error-banner hidden"></div>
+      <!-- Brand / story panel -->
+      <div class="auth-panel-brand">
+        <svg class="circuit-art" viewBox="0 0 520 640" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <g class="circuit-lines">
+            <path d="M -10 120 H 140 V 40 H 320" />
+            <path d="M -10 260 H 90 V 340 H 260 V 220 H 480" />
+            <path d="M -10 420 H 180 V 500 H 380 V 420 H 530" />
+            <path d="M 340 40 V 180 H 530" />
+            <path d="M 60 560 H 220 V 640" />
+            <path d="M 300 560 H 420 V 500" />
+          </g>
+          <g class="circuit-nodes">
+            <circle cx="140" cy="120" r="6" />
+            <circle cx="320" cy="40" r="6" />
+            <circle cx="90" cy="260" r="6" />
+            <circle cx="260" cy="340" r="6" />
+            <circle cx="480" cy="220" r="6" />
+            <circle cx="180" cy="420" r="6" />
+            <circle cx="380" cy="500" r="6" />
+            <circle cx="340" cy="180" r="6" />
+            <circle cx="220" cy="560" r="6" />
+            <circle cx="420" cy="500" r="6" />
+          </g>
+        </svg>
 
-        <form id="login-form">
-          <div class="field">
-            <label for="login-email">Email</label>
-            <div class="input-wrap">
-              <input id="login-email" type="email" autocomplete="email" placeholder="you@example.com" required />
-            </div>
-          </div>
-          <div class="field">
-            <label for="login-password">Password</label>
-            <div class="input-wrap">
-              <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" required />
-              <button type="button" class="toggle-visibility" data-target="login-password">Show</button>
-            </div>
-          </div>
-          <button type="submit" class="btn btn-primary">Get Started</button>
-        </form>
+        <div class="brand-bar">
+          <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
+          <div class="brand-name">Creobotics</div>
+        </div>
 
-        <p class="auth-switch">
-          <button type="button" id="forgot-password-link">Forgot password?</button>
-        </p>
-        <p class="auth-switch">Don't have an account?
-          <button type="button" id="go-signup">Sign Up</button>
-        </p>
+        <div class="auth-pitch">
+          <h2>Build your robotics brain, one module at a time.</h2>
+          <p>32 guided lessons from Grade 4 through Senior High — hardware, sensors, coding, and autonomous behavior, all in the browser.</p>
+          <ul class="pitch-list">
+            <li><span class="pitch-dot"></span>Bite-sized lessons with quizzes that unlock the next one</li>
+            <li><span class="pitch-dot"></span>Track your progress, streaks, and best scores</li>
+            <li><span class="pitch-dot"></span>Works offline, right in your browser</li>
+          </ul>
+        </div>
       </div>
+
+      <!-- Form panel -->
+      <div class="auth-panel-form">
+        <div class="auth-wrap">
+          <div class="auth-card">
+            <div class="brand-bar auth-card-brand">
+              <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
+              <div class="brand-name brand-name-dark">Creobotics</div>
+            </div>
+
+            <h1 class="auth-title">Welcome back</h1>
+            <p class="auth-subtitle">Log in to continue learning robotics</p>
+
+            <div id="login-error" class="error-banner hidden"></div>
+            <div id="login-success" class="success-banner hidden"></div>
+
+            <form id="login-form">
+              <div class="field">
+                <label for="login-email">Email</label>
+                <div class="input-wrap">
+                  <input id="login-email" type="email" autocomplete="email" placeholder="you@example.com" required />
+                </div>
+              </div>
+              <div class="field">
+                <label for="login-password">Password</label>
+                <div class="input-wrap">
+                  <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+                  <button type="button" class="toggle-visibility" data-target="login-password">Show</button>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Get Started</button>
+            </form>
+
+            <p class="auth-switch" style="margin-top:10px; margin-bottom:0;">
+              <button type="button" id="forgot-password-link">Forgot password?</button>
+            </p>
+
+            <p class="auth-switch">Don't have an account?
+              <button type="button" id="go-signup">Sign Up</button>
+            </p>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
   <!-- ============ AUTH: SIGNUP VIEW ============ -->
   <section id="view-signup" class="view hidden">
-    <div class="brand-bar">
-      <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
-      <div class="brand-name">Creobotics</div>
-    </div>
-    <div class="auth-wrap">
-      <div class="auth-card">
-        <div class="auth-icon"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
-        <h1 class="auth-title">Join Creobotics</h1>
-        <p class="auth-subtitle">Create a free account to start learning</p>
+    <div class="auth-split">
 
-        <div id="signup-error" class="error-banner hidden"></div>
+      <div class="auth-panel-brand">
+        <svg class="circuit-art" viewBox="0 0 520 640" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <g class="circuit-lines">
+            <path d="M -10 120 H 140 V 40 H 320" />
+            <path d="M -10 260 H 90 V 340 H 260 V 220 H 480" />
+            <path d="M -10 420 H 180 V 500 H 380 V 420 H 530" />
+            <path d="M 340 40 V 180 H 530" />
+            <path d="M 60 560 H 220 V 640" />
+            <path d="M 300 560 H 420 V 500" />
+          </g>
+          <g class="circuit-nodes">
+            <circle cx="140" cy="120" r="6" />
+            <circle cx="320" cy="40" r="6" />
+            <circle cx="90" cy="260" r="6" />
+            <circle cx="260" cy="340" r="6" />
+            <circle cx="480" cy="220" r="6" />
+            <circle cx="180" cy="420" r="6" />
+            <circle cx="380" cy="500" r="6" />
+            <circle cx="340" cy="180" r="6" />
+            <circle cx="220" cy="560" r="6" />
+            <circle cx="420" cy="500" r="6" />
+          </g>
+        </svg>
 
-        <form id="signup-form">
-          <div class="field">
-            <label for="signup-name">Full Name</label>
-            <div class="input-wrap">
-              <input id="signup-name" type="text" autocomplete="name" placeholder="Jane Dela Cruz" required />
-            </div>
-          </div>
-          <div class="field">
-            <label for="signup-email">Email</label>
-            <div class="input-wrap">
-              <input id="signup-email" type="email" autocomplete="email" placeholder="you@example.com" required />
-            </div>
-          </div>
-          <div class="field">
-            <label for="signup-school">School</label>
-            <div class="input-wrap">
-              <input id="signup-school" type="text" autocomplete="school" placeholder="Polytechnic University of the Philippines" required />
-            </div>
-          </div>
-          <div class="field">
-            <label for="signup-password">Password</label>
-            <div class="input-wrap">
-              <input id="signup-password" type="password" autocomplete="new-password" placeholder="At least 6 characters" required />
-              <button type="button" class="toggle-visibility" data-target="signup-password">Show</button>
-            </div>
-          </div>
-          <div class="field">
-            <label for="signup-confirm">Confirm Password</label>
-            <div class="input-wrap">
-              <input id="signup-confirm" type="password" autocomplete="new-password" placeholder="Repeat password" required />
-              <button type="button" class="toggle-visibility" data-target="signup-confirm">Show</button>
-            </div>
-          </div>
-          <button type="submit" class="btn btn-primary">Create Account</button>
-        </form>
+        <div class="brand-bar">
+          <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
+          <div class="brand-name">Creobotics</div>
+        </div>
 
-        <p class="auth-switch">Already have an account?
-          <button type="button" id="go-login">Log In</button>
-        </p>
+        <div class="auth-pitch">
+          <h2>Your first module is two minutes away.</h2>
+          <p>Create a free account to save your progress, unlock lessons as you pass quizzes, and pick up right where you left off.</p>
+          <ul class="pitch-list">
+            <li><span class="pitch-dot"></span>Free to join — no credit card, ever</li>
+            <li><span class="pitch-dot"></span>Built for Grade 4 through Senior High</li>
+            <li><span class="pitch-dot"></span>Your data stays in your browser</li>
+          </ul>
+        </div>
       </div>
+
+      <div class="auth-panel-form">
+        <div class="auth-wrap">
+          <div class="auth-card">
+            <div class="brand-bar auth-card-brand">
+              <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
+              <div class="brand-name brand-name-dark">Creobotics</div>
+            </div>
+
+            <h1 class="auth-title">Join Creobotics</h1>
+            <p class="auth-subtitle">Create a free account to start learning</p>
+
+            <div id="signup-error" class="error-banner hidden"></div>
+
+            <form id="signup-form">
+              <div class="field">
+                <label for="signup-name">Full Name</label>
+                <div class="input-wrap">
+                  <input id="signup-name" type="text" autocomplete="name" placeholder="Jane Dela Cruz" required />
+                </div>
+              </div>
+              <div class="field">
+                <label for="signup-email">Email</label>
+                <div class="input-wrap">
+                  <input id="signup-email" type="email" autocomplete="email" placeholder="you@example.com" required />
+                </div>
+              </div>
+              <div class="field">
+                <label for="signup-school">School</label>
+                <div class="input-wrap">
+                  <input id="signup-school" type="text" autocomplete="school" placeholder="Polytechnic University of the Philippines" required />
+                </div>
+              </div>
+              <div class="field">
+                <label for="signup-password">Password</label>
+                <div class="input-wrap">
+                  <input id="signup-password" type="password" autocomplete="new-password" placeholder="At least 6 characters" required />
+                  <button type="button" class="toggle-visibility" data-target="signup-password">Show</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="signup-confirm">Confirm Password</label>
+                <div class="input-wrap">
+                  <input id="signup-confirm" type="password" autocomplete="new-password" placeholder="Repeat password" required />
+                  <button type="button" class="toggle-visibility" data-target="signup-confirm">Show</button>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Create Account</button>
+            </form>
+
+            <p class="auth-switch">Already have an account?
+              <button type="button" id="go-login">Log In</button>
+            </p>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
-  <!-- ============ PROFILE SETUP ============ -->
+  <!-- ============ PROFILE SETUP: AVATAR + NICKNAME (first thing after auth) ============ -->
   <section id="view-avatar-setup" class="view hidden">
-    <div class="brand-bar">
+    <div class="brand-bar avatar-setup-topbar">
       <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
       <div class="brand-name">Creobotics</div>
     </div>
     <div class="auth-wrap">
-      <div class="auth-card" style="max-width:560px;">
+      <div class="auth-card auth-card-wide">
         <h1 class="auth-title" id="avatar-setup-heading">Set up your profile</h1>
         <p class="auth-subtitle" id="avatar-setup-subtitle">Pick an avatar and a nickname to get started</p>
 
@@ -126,7 +223,7 @@
 
         <div class="avatar-grid" id="avatar-grid"></div>
 
-        <div class="field" style="margin-top:20px;">
+        <div class="field" style="margin-top:22px;">
           <label for="setup-nickname">Nickname</label>
           <div class="input-wrap">
             <input id="setup-nickname" type="text" placeholder="What should we call you?" maxlength="20" />
@@ -142,45 +239,92 @@
     </div>
   </section>
 
-  <!-- ============ MAIN APP SHELL ============ -->
+  <!-- ============ MAIN APP SHELL (post-login) ============ -->
   <section id="view-app" class="view hidden">
     <div class="app-shell">
 
-      <!-- Sidebar -->
+      <!-- Sidebar (desktop) -->
       <aside class="sidebar">
-        <div class="brand-bar" style="padding:0;">
+        <div class="brand-bar sidebar-brand">
           <div class="brand-mark"><img src="images/app_logo.png" alt="Creobotics logo" /></div>
           <div class="brand-name">Creobotics</div>
         </div>
+        <div class="nav-eyebrow">Menu</div>
         <ul class="nav-list">
-          <li><button class="nav-item" data-page="home">Dashboard</button></li>
-          <li><button class="nav-item" data-page="modules">eBook Modules</button></li>
-          <li><button class="nav-item" data-page="leaderboard">Leaderboard</button></li>
-          <li><button class="nav-item" data-page="profile">Profile</button></li>
-          <li><button class="nav-item" data-page="settings">Settings</button></li>
-          <li id="nav-teacher-item" class="hidden"><button class="nav-item" data-page="teacher">Teacher</button></li>
-          <li id="nav-admin-item" class="hidden"><button class="nav-item" data-page="admin">Admin</button></li>
-          <li><button class="nav-item" data-page="about">About</button></li>
+          <li>
+            <button class="nav-item" data-page="home">
+              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+              <span>Dashboard</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" data-page="progress">
+              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a6 6 0 1 1-12 0c0-1.153.433-2.294 1.279-3.264.146-.169.319-.323.5-.463"/></svg></span>
+              <span>Progress</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" data-page="modules">
+              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span>
+              <span>eBook Modules</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" data-page="profile">
+              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
+              <span>Profile</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" data-page="settings">
+              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></span>
+              <span>Settings</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" data-page="about">
+              <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4.5"/><path d="M12 8h.01"/></svg></span>
+              <span>About</span>
+            </button>
+          </li>
         </ul>
         <div class="sidebar-footer">
-          <button id="sidebar-logout" class="btn btn-outline btn-sm" style="width:100%; background:rgba(255,255,255,0.9);">Log Out</button>
+          <button id="sidebar-logout" class="btn btn-outline btn-sm sidebar-logout-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            Log Out
+          </button>
         </div>
       </aside>
 
-      <!-- Main content -->
-      <main class="main-content" id="main-content"></main>
+      <!-- Main content: pages are rendered here by JS -->
+      <main class="main-content" id="main-content">
+        <!-- JS injects page markup here -->
+      </main>
     </div>
 
     <!-- Mobile bottom nav -->
     <nav class="bottom-nav">
       <div class="bottom-nav-inner">
-        <button class="bottom-nav-item" data-page="home">Dashboard</button>
-        <button class="bottom-nav-item" data-page="modules">Modules</button>
-        <button class="bottom-nav-item" data-page="leaderboard">Ranks</button>
-        <button class="bottom-nav-item" data-page="profile">Profile</button>
-        <button class="bottom-nav-item" data-page="settings">Settings</button>
-        <button class="bottom-nav-item hidden" id="bottom-nav-teacher-item" data-page="teacher">Teacher</button>
-        <button class="bottom-nav-item hidden" id="bottom-nav-admin-item" data-page="admin">Admin</button>
+        <button class="bottom-nav-item" data-page="home">
+          <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+          <span>Dashboard</span>
+        </button>
+        <button class="bottom-nav-item" data-page="progress">
+          <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a6 6 0 1 1-12 0c0-1.153.433-2.294 1.279-3.264.146-.169.319-.323.5-.463"/></svg></span>
+          <span>Progress</span>
+        </button>
+        <button class="bottom-nav-item" data-page="modules">
+          <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span>
+          <span>Modules</span>
+        </button>
+        <button class="bottom-nav-item" data-page="profile">
+          <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
+          <span>Profile</span>
+        </button>
+        <button class="bottom-nav-item" data-page="settings">
+          <span class="bn-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></span>
+          <span>Settings</span>
+        </button>
       </div>
     </nav>
   </section>
@@ -190,12 +334,10 @@
 <!-- Toast notification -->
 <div id="toast"></div>
 
-<!-- Modal root -->
+<!-- Modal root (confirm dialogs injected here) -->
 <div id="modal-root"></div>
 
-<!-- ===== SCRIPTS ===== -->
 <script src="js/data.js"></script>
-<script type="module" src="js/app.js"></script>
-
+<script src="js/app.js"></script>
 </body>
 </html>
