@@ -1547,6 +1547,7 @@ function openRedeemSerialModal() {
     fields: [{ id: "code", label: "Serial Key", type: "text", placeholder: "CREO-XXXX-XXXX-XXXX" }],
     confirmLabel: "Redeem",
     onSubmit: async ({ code }) => {
+<<<<<<< HEAD
       if (!code || !code.trim()) return "Enter a serial key.";
 
       let api;
@@ -1587,6 +1588,10 @@ function openRedeemSerialModal() {
         console.warn("Redeemed successfully, but couldn't sync access status:", e);
       }
 
+=======
+      const err = redeemSerialKey(state.user.email, code || "");
+      if (err) return err;
+>>>>>>> c98de6364b426b91a92c5879f207e201c7e2dbd7
       showToast("Serial key redeemed! Grade 4 is unlocked for one year.");
       navigate(state.currentPage === "home" ? "home" : "modules");
       return null;
